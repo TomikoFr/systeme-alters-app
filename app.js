@@ -1,5 +1,6 @@
 const SUPABASE_URL = "https://qypuxsaycserysutqhty.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_fjaREfJu0Y9rFjKkePYOkQ_rAZH3HPa";
+const PHOTO_BUCKET = "alter-photos";
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
@@ -29,6 +30,7 @@ const els = {
   alterAge: document.querySelector("#alter-age"),
   alterRole: document.querySelector("#alter-role"),
   alterColor: document.querySelector("#alter-color"),
+  alterPhoto: document.querySelector("#alter-photo"),
   alterNotes: document.querySelector("#alter-notes"),
   resetAlterForm: document.querySelector("#reset-alter-form"),
   alterList: document.querySelector("#alter-list"),
@@ -224,7 +226,7 @@ async function loadRemoteState() {
   }
 
   state = {
-    alters: altersResult.data.map(mapAlterFromDb),
+    alters: await Promise.all(altersResult.data.map(mapAlterFromDb)),
     fronts: frontsResult.data.map(mapFrontFromDb),
     notes: notesResult.data.map(mapNoteFromDb),
   };
@@ -278,16 +280,21 @@ async function seedIfEmpty() {
 }
 
 async function saveAlter() {
-  const id = els.alterId.value;
+  const id = els.alterId.value || makeId();
+  const existingAlter = state.alters.find((alter) => alter.id === id);
+  const photoPath = await uploadAlterPhoto(id, existingAlter?.photoPath || "");
+
   const payload = {
+    id,
     name: els.alterName.value.trim(),
     age: els.alterAge.value.trim(),
     role: els.alterRole.value.trim(),
     color: els.alterColor.value,
     notes: els.alterNotes.value.trim(),
+    photo_path: photoPath,
   };
 
-  const result = id
+  const result = els.alterId.value
     ? await db.from("alters").update(payload).eq("id", id)
     : await db.from("alters").insert(payload);
 
@@ -421,7 +428,7 @@ function renderAlterCard(alter) {
   return `
     <article class="alter-card">
       <header>
-        <span class="swatch" style="background:${escapeAttr(alter.color)}"></span>
+        ${renderAlterPhoto(alter)}
         <h3>${escapeHtml(alter.name)}</h3>
       </header>
       <div class="tag-row">
@@ -440,7 +447,7 @@ function renderAlterCard(alter) {
 function renderCompactAlter(alter) {
   return `
     <div class="compact-item">
-      <span class="swatch" style="background:${escapeAttr(alter.color)}"></span>
+      ${renderAlterPhoto(alter, "compact-photo")}
       <div>
         <strong>${escapeHtml(alter.name)}</strong>
         <p>${escapeHtml(alter.role || "Rôle non renseigné")}</p>
@@ -487,6 +494,7 @@ function editAlter(id) {
   els.alterAge.value = alter.age;
   els.alterRole.value = alter.role;
   els.alterColor.value = alter.color;
+  els.alterPhoto.value = "";
   els.alterNotes.value = alter.notes;
   els.alterName.focus();
 }
@@ -497,6 +505,10 @@ async function deleteAlter(id) {
 
   const confirmed = confirm(`Supprimer ${alter.name} ? Les fronts liés resteront dans l'historique.`);
   if (!confirmed) return;
+
+  if (alter.photoPath) {
+    await db.storage.from(PHOTO_BUCKET).remove([alter.photoPath]);
+  }
 
   const { error } = await db.from("alters").delete().eq("id", id);
   if (error) {
@@ -535,6 +547,39 @@ function resetAlterForm() {
   els.alterColor.value = "#3f7d68";
 }
 
+async function uploadAlterPhoto(alterId, previousPath) {
+  const file = els.alterPhoto.files?.[0];
+  if (!file) return previousPath;
+
+  if (!file.type.startsWith("image/")) {
+    alert("Choisis un fichier image.");
+    return previousPath;
+  }
+
+  if (file.size > 4 * 1024 * 1024) {
+    alert("La photo doit faire moins de 4 Mo.");
+    return previousPath;
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${currentUser.id}/${alterId}-${Date.now()}.${extension}`;
+  const { error } = await db.storage.from(PHOTO_BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: true,
+  });
+
+  if (error) {
+    alert(`Erreur photo : ${error.message}`);
+    return previousPath;
+  }
+
+  if (previousPath) {
+    await db.storage.from(PHOTO_BUCKET).remove([previousPath]);
+  }
+
+  return path;
+}
+
 function exportJson() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -569,7 +614,9 @@ function normalizeEmail(value) {
   return value.trim().toLowerCase();
 }
 
-function mapAlterFromDb(row) {
+async function mapAlterFromDb(row) {
+  const photoUrl = row.photo_path ? await getPhotoUrl(row.photo_path) : "";
+
   return {
     id: row.id,
     name: row.name,
@@ -577,8 +624,31 @@ function mapAlterFromDb(row) {
     role: row.role || "",
     color: row.color || "#3f7d68",
     notes: row.notes || "",
+    photoPath: row.photo_path || "",
+    photoUrl,
     createdAt: row.created_at,
   };
+}
+
+async function getPhotoUrl(path) {
+  const { data, error } = await db.storage.from(PHOTO_BUCKET).createSignedUrl(path, 60 * 60);
+  return error ? "" : data.signedUrl;
+}
+
+function renderAlterPhoto(alter, className = "alter-photo") {
+  if (alter.photoUrl) {
+    return `<img class="${className}" src="${escapeAttr(alter.photoUrl)}" alt="">`;
+  }
+
+  return `<span class="swatch ${className}" style="background:${escapeAttr(alter.color)}"></span>`;
+}
+
+function makeId() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function mapFrontFromDb(row) {

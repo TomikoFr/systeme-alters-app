@@ -356,12 +356,42 @@ textarea {
   margin-bottom: 12px;
 }
 
+.alter-photo {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid rgba(23, 33, 28, 0.16);
+}
+
+.compact-photo {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid rgba(23, 33, 28, 0.16);
+}
+
 .swatch {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
   border-radius: 50%;
   border: 2px solid rgba(23, 33, 28, 0.18);
+}
+
+.swatch.alter-photo {
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+}
+
+.swatch.compact-photo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
 }
 
 .alter-card h3,

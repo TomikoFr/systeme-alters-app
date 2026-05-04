@@ -6,8 +6,12 @@ create table if not exists public.alters (
   role text default '',
   color text not null default '#3f7d68',
   notes text default '',
+  photo_path text default '',
   created_at timestamptz not null default now()
 );
+
+alter table public.alters
+add column if not exists photo_path text default '';
 
 create table if not exists public.fronts (
   id uuid primary key default gen_random_uuid(),
@@ -32,6 +36,13 @@ alter table public.alters enable row level security;
 alter table public.fronts enable row level security;
 alter table public.notes enable row level security;
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('alter-photos', 'alter-photos', false, 4194304, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
 drop policy if exists "Users can read their alters" on public.alters;
 drop policy if exists "Users can create their alters" on public.alters;
 drop policy if exists "Users can update their alters" on public.alters;
@@ -44,6 +55,10 @@ drop policy if exists "Users can read their notes" on public.notes;
 drop policy if exists "Users can create their notes" on public.notes;
 drop policy if exists "Users can update their notes" on public.notes;
 drop policy if exists "Users can delete their notes" on public.notes;
+drop policy if exists "Users can read their alter photos" on storage.objects;
+drop policy if exists "Users can upload their alter photos" on storage.objects;
+drop policy if exists "Users can update their alter photos" on storage.objects;
+drop policy if exists "Users can delete their alter photos" on storage.objects;
 
 create policy "Users can read their alters"
 on public.alters for select
@@ -117,3 +132,35 @@ with check (auth.uid() = user_id);
 create policy "Users can delete their notes"
 on public.notes for delete
 using (auth.uid() = user_id);
+
+create policy "Users can read their alter photos"
+on storage.objects for select
+using (
+  bucket_id = 'alter-photos'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+create policy "Users can upload their alter photos"
+on storage.objects for insert
+with check (
+  bucket_id = 'alter-photos'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+create policy "Users can update their alter photos"
+on storage.objects for update
+using (
+  bucket_id = 'alter-photos'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'alter-photos'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+create policy "Users can delete their alter photos"
+on storage.objects for delete
+using (
+  bucket_id = 'alter-photos'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);

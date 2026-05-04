@@ -27,14 +27,14 @@ Dans Supabase, verifie aussi `Authentication` > `URL Configuration` :
 - Connexion et creation de compte avec Supabase Auth.
 - Donnees synchronisees entre appareils apres connexion.
 - Tableau de bord avec front actuel, nombre d'alters et derniere note.
-- Repertoire des alters avec nom, age, role, couleur et notes.
+- Repertoire des alters avec nom, age, role, couleur, photo et notes.
 - Suivi des fronts avec date, intensite de presence et contexte.
 - Journal partage avec humeur et notes.
 - Export JSON pour faire une sauvegarde.
 
 ## Securite
 
-La cle Supabase utilisee dans `app.js` est une cle publishable, prevue pour etre visible dans le navigateur. Les donnees restent protegees par les policies RLS dans `supabase.sql`.
+La cle Supabase utilisee dans `app.js` est une cle publishable, prevue pour etre visible dans le navigateur. Les donnees et les photos restent protegees par les policies RLS dans `supabase.sql`.
 
 Ne publie jamais la cle `secret` ou `service_role`.
 
