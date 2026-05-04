@@ -32,9 +32,24 @@ create table if not exists public.notes (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.discord_link_codes (
+  code text primary key,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.discord_links (
+  discord_user_id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
 alter table public.alters enable row level security;
 alter table public.fronts enable row level security;
 alter table public.notes enable row level security;
+alter table public.discord_link_codes enable row level security;
+alter table public.discord_links enable row level security;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('alter-photos', 'alter-photos', false, 4194304, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
@@ -55,6 +70,10 @@ drop policy if exists "Users can read their notes" on public.notes;
 drop policy if exists "Users can create their notes" on public.notes;
 drop policy if exists "Users can update their notes" on public.notes;
 drop policy if exists "Users can delete their notes" on public.notes;
+drop policy if exists "Users can read their link codes" on public.discord_link_codes;
+drop policy if exists "Users can create their link codes" on public.discord_link_codes;
+drop policy if exists "Users can delete their link codes" on public.discord_link_codes;
+drop policy if exists "Users can read their discord links" on public.discord_links;
 drop policy if exists "Users can read their alter photos" on storage.objects;
 drop policy if exists "Users can upload their alter photos" on storage.objects;
 drop policy if exists "Users can update their alter photos" on storage.objects;
@@ -131,6 +150,22 @@ with check (auth.uid() = user_id);
 
 create policy "Users can delete their notes"
 on public.notes for delete
+using (auth.uid() = user_id);
+
+create policy "Users can read their link codes"
+on public.discord_link_codes for select
+using (auth.uid() = user_id);
+
+create policy "Users can create their link codes"
+on public.discord_link_codes for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can delete their link codes"
+on public.discord_link_codes for delete
+using (auth.uid() = user_id);
+
+create policy "Users can read their discord links"
+on public.discord_links for select
 using (auth.uid() = user_id);
 
 create policy "Users can read their alter photos"

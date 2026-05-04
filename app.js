@@ -21,6 +21,8 @@ const els = {
   registerPassword: document.querySelector("#register-password"),
   registerConfirm: document.querySelector("#register-confirm"),
   activeAccount: document.querySelector("#active-account"),
+  discordLinkButton: document.querySelector("#discord-link-button"),
+  discordLinkCode: document.querySelector("#discord-link-code"),
   logoutButton: document.querySelector("#logout-button"),
   tabs: document.querySelectorAll(".nav-tab"),
   views: document.querySelectorAll(".view"),
@@ -89,6 +91,7 @@ function wireEvents() {
   });
 
   els.logoutButton.addEventListener("click", logoutAccount);
+  els.discordLinkButton.addEventListener("click", generateDiscordLinkCode);
 
   els.tabs.forEach((tab) => {
     tab.addEventListener("click", () => setView(tab.dataset.view));
@@ -200,6 +203,8 @@ async function logoutAccount() {
   await db.auth.signOut();
   currentUser = null;
   state = { alters: [], fronts: [], notes: [] };
+  els.discordLinkCode.classList.add("hidden");
+  els.discordLinkCode.textContent = "";
   showAuth("Tu es déconnecté.");
 }
 
@@ -210,6 +215,28 @@ function showAuthError(message) {
 function clearAuthForms() {
   els.loginForm.reset();
   els.registerForm.reset();
+}
+
+async function generateDiscordLinkCode() {
+  if (!currentUser) return;
+
+  const code = makeLinkCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+  await db.from("discord_link_codes").delete().eq("user_id", currentUser.id);
+
+  const { error } = await db.from("discord_link_codes").insert({
+    code,
+    expires_at: expiresAt,
+  });
+
+  if (error) {
+    alert(`Erreur Supabase : ${error.message}. As-tu réexécuté supabase.sql ?`);
+    return;
+  }
+
+  els.discordLinkCode.textContent = `Code Discord : ${code} · commande : /lier code:${code}`;
+  els.discordLinkCode.classList.remove("hidden");
 }
 
 async function loadRemoteState() {
@@ -649,6 +676,21 @@ function makeId() {
   }
 
   return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function makeLinkCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(8);
+
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+
+  return [...bytes].map((byte) => alphabet[byte % alphabet.length]).join("");
 }
 
 function mapFrontFromDb(row) {

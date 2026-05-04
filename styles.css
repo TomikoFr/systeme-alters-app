@@ -108,6 +108,16 @@ button {
   margin-top: 16px;
 }
 
+.link-code {
+  padding: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--pond);
+  background: rgba(49, 95, 114, 0.08);
+  font-weight: 800;
+  word-break: break-word;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 290px minmax(0, 1fr);
@@ -491,7 +501,7 @@ textarea {
     text-align: center;
   }
 
-  .privacy-note {
+  .privacy-note p {
     display: none;
   }
 
