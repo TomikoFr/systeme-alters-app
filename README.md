@@ -10,11 +10,20 @@ Les données sont stockées dans le `localStorage` du navigateur. Elles restent 
 
 ## Fonctions
 
+- Comptes locaux avec page de connexion.
 - Tableau de bord avec front actuel, nombre d'alters et dernière note.
 - Répertoire des alters avec nom, âge, rôle, couleur et notes.
 - Suivi des fronts avec date, intensité de présence et contexte.
 - Journal partagé avec humeur et notes.
 - Export JSON pour faire une sauvegarde.
+
+## Comptes
+
+Les comptes sont stockés dans le navigateur avec `localStorage`. Ils servent à séparer plusieurs espaces de données sur le même appareil ou navigateur.
+
+Sur GitHub Pages, il n'y a pas de serveur ni de base de données distante : un compte créé sur un navigateur ne sera pas automatiquement disponible sur un autre ordinateur ou téléphone.
+
+Les mots de passe sont hachés côté navigateur quand l'API crypto est disponible. Ce système protège surtout contre les accès accidentels sur le même navigateur ; il ne remplace pas une vraie authentification serveur.
 
 ## Note importante
 

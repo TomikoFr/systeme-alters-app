@@ -37,6 +37,77 @@ button {
   cursor: pointer;
 }
 
+.hidden {
+  display: none !important;
+}
+
+.auth-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 22px;
+}
+
+.auth-panel {
+  width: min(100%, 430px);
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 247, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.auth-brand {
+  margin-bottom: 18px;
+}
+
+.auth-message {
+  min-height: 44px;
+  margin: 0 0 18px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.auth-tab {
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 800;
+}
+
+.auth-tab.active {
+  color: white;
+  border-color: var(--moss);
+  background: var(--moss);
+}
+
+.auth-view {
+  display: none;
+}
+
+.auth-view.active {
+  display: grid;
+}
+
+.auth-form {
+  gap: 14px;
+}
+
+.account-box {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 290px minmax(0, 1fr);

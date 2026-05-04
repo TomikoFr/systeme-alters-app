@@ -1,8 +1,26 @@
-const STORAGE_KEY = "systeme-alters-app";
+const LEGACY_STORAGE_KEY = "systeme-alters-app";
+const ACCOUNTS_KEY = "systeme-alters-app:accounts";
+const SESSION_KEY = "systeme-alters-app:session";
+const DATA_PREFIX = "systeme-alters-app:data:";
 
-const state = loadState();
+let currentAccount = null;
+let state = { alters: [], fronts: [], notes: [] };
 
 const els = {
+  authScreen: document.querySelector("#auth-screen"),
+  appShell: document.querySelector("#app-shell"),
+  authTabs: document.querySelectorAll(".auth-tab"),
+  authViews: document.querySelectorAll(".auth-view"),
+  authMessage: document.querySelector("#auth-message"),
+  loginForm: document.querySelector("#login-panel"),
+  loginUsername: document.querySelector("#login-username"),
+  loginPassword: document.querySelector("#login-password"),
+  registerForm: document.querySelector("#register-panel"),
+  registerUsername: document.querySelector("#register-username"),
+  registerPassword: document.querySelector("#register-password"),
+  registerConfirm: document.querySelector("#register-confirm"),
+  activeAccount: document.querySelector("#active-account"),
+  logoutButton: document.querySelector("#logout-button"),
   tabs: document.querySelectorAll(".nav-tab"),
   views: document.querySelectorAll(".view"),
   alterForm: document.querySelector("#alter-form"),
@@ -35,15 +53,14 @@ const els = {
   exportData: document.querySelector("#export-data"),
 };
 
-seedIfEmpty();
-wireEvents();
-render();
+initialize();
 
 function loadState() {
   const fallback = { alters: [], fronts: [], notes: [] };
+  if (!currentAccount) return fallback;
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(getAccountDataKey(currentAccount.id));
     return stored ? JSON.parse(stored) : fallback;
   } catch {
     return fallback;
@@ -51,7 +68,52 @@ function loadState() {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!currentAccount) return;
+  localStorage.setItem(getAccountDataKey(currentAccount.id), JSON.stringify(state));
+}
+
+function getAccounts() {
+  try {
+    return JSON.parse(localStorage.getItem(ACCOUNTS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveAccounts(accounts) {
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+}
+
+function getAccountDataKey(accountId) {
+  return `${DATA_PREFIX}${accountId}`;
+}
+
+function migrateLegacyDataIfNeeded() {
+  if (!currentAccount) return;
+  if (localStorage.getItem(getAccountDataKey(currentAccount.id))) return;
+
+  const legacyData = localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (!legacyData) return;
+
+  try {
+    state = JSON.parse(legacyData);
+    saveState();
+  } catch {
+    state = { alters: [], fronts: [], notes: [] };
+  }
+}
+
+function initialize() {
+  wireEvents();
+
+  const sessionId = localStorage.getItem(SESSION_KEY);
+  const account = getAccounts().find((item) => item.id === sessionId);
+
+  if (account) {
+    startSession(account);
+  } else {
+    showAuth();
+  }
 }
 
 function seedIfEmpty() {
@@ -103,6 +165,22 @@ function seedIfEmpty() {
 }
 
 function wireEvents() {
+  els.authTabs.forEach((tab) => {
+    tab.addEventListener("click", () => setAuthView(tab.dataset.authView));
+  });
+
+  els.loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await loginAccount();
+  });
+
+  els.registerForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await registerAccount();
+  });
+
+  els.logoutButton.addEventListener("click", logoutAccount);
+
   els.tabs.forEach((tab) => {
     tab.addEventListener("click", () => setView(tab.dataset.view));
   });
@@ -167,6 +245,154 @@ function wireEvents() {
   });
 
   els.exportData.addEventListener("click", exportJson);
+}
+
+function showAuth(message = "Les comptes restent dans ce navigateur. Ils ne sont pas synchronisés en ligne.") {
+  els.authScreen.classList.remove("hidden");
+  els.appShell.classList.add("hidden");
+  els.authMessage.textContent = message;
+}
+
+function showApp() {
+  els.authScreen.classList.add("hidden");
+  els.appShell.classList.remove("hidden");
+}
+
+function setAuthView(id) {
+  els.authTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.authView === id));
+  els.authViews.forEach((view) => view.classList.toggle("active", view.id === id));
+  els.authMessage.textContent = "Les comptes restent dans ce navigateur. Ils ne sont pas synchronisés en ligne.";
+}
+
+async function registerAccount() {
+  const username = normalizeUsername(els.registerUsername.value);
+  const password = els.registerPassword.value;
+  const confirm = els.registerConfirm.value;
+
+  if (!username) {
+    showAuthError("Choisis un nom de compte.");
+    return;
+  }
+
+  if (password.length < 4) {
+    showAuthError("Le mot de passe doit faire au moins 4 caractères.");
+    return;
+  }
+
+  if (password !== confirm) {
+    showAuthError("Les deux mots de passe ne correspondent pas.");
+    return;
+  }
+
+  const accounts = getAccounts();
+  if (accounts.some((account) => normalizeUsername(account.username) === username)) {
+    showAuthError("Ce nom de compte existe déjà dans ce navigateur.");
+    return;
+  }
+
+  const salt = makeId();
+  const passwordAlgorithm = canUseStrongHash() ? "sha256" : "fallback";
+  const account = {
+    id: makeId(),
+    username: username,
+    salt,
+    passwordAlgorithm,
+    passwordHash: await hashPassword(password, salt, passwordAlgorithm),
+    createdAt: new Date().toISOString(),
+  };
+
+  accounts.push(account);
+  saveAccounts(accounts);
+  currentAccount = account;
+  state = loadState();
+  migrateLegacyDataIfNeeded();
+  seedIfEmpty();
+  localStorage.setItem(SESSION_KEY, account.id);
+  clearAuthForms();
+  showApp();
+  render();
+}
+
+async function loginAccount() {
+  const username = normalizeUsername(els.loginUsername.value);
+  const password = els.loginPassword.value;
+  const account = getAccounts().find((item) => normalizeUsername(item.username) === username);
+
+  if (!account) {
+    showAuthError("Compte introuvable dans ce navigateur.");
+    return;
+  }
+
+  if ((account.passwordAlgorithm || "sha256") === "sha256" && !canUseStrongHash()) {
+    showAuthError("Ce navigateur ne peut pas vérifier ce mot de passe. Ouvre l'app via GitHub Pages.");
+    return;
+  }
+
+  const passwordHash = await hashPassword(password, account.salt, account.passwordAlgorithm || "sha256");
+  if (passwordHash !== account.passwordHash) {
+    showAuthError("Mot de passe incorrect.");
+    return;
+  }
+
+  startSession(account);
+  clearAuthForms();
+}
+
+function startSession(account) {
+  currentAccount = account;
+  state = loadState();
+  seedIfEmpty();
+  localStorage.setItem(SESSION_KEY, account.id);
+  els.activeAccount.textContent = `Compte : ${account.username}`;
+  showApp();
+  render();
+}
+
+function logoutAccount() {
+  localStorage.removeItem(SESSION_KEY);
+  currentAccount = null;
+  state = { alters: [], fronts: [], notes: [] };
+  showAuth("Tu es déconnecté de ce compte local.");
+}
+
+function showAuthError(message) {
+  els.authMessage.textContent = message;
+}
+
+function clearAuthForms() {
+  els.loginForm.reset();
+  els.registerForm.reset();
+}
+
+function normalizeUsername(value) {
+  return value.trim().toLowerCase();
+}
+
+function canUseStrongHash() {
+  return Boolean(globalThis.crypto?.subtle && globalThis.TextEncoder);
+}
+
+async function hashPassword(password, salt, algorithm = "sha256") {
+  const payload = `${salt}:${password}`;
+
+  if (algorithm === "sha256" && canUseStrongHash()) {
+    const bytes = new TextEncoder().encode(payload);
+    const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(hashBuffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  return fallbackHash(payload);
+}
+
+function fallbackHash(value) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return `fallback-${(hash >>> 0).toString(16)}`;
 }
 
 function setView(id) {

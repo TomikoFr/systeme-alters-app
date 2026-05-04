@@ -7,7 +7,54 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <section class="auth-screen" id="auth-screen">
+      <div class="auth-panel">
+        <div class="brand auth-brand">
+          <span class="brand-mark" aria-hidden="true">S</span>
+          <div>
+            <h1>Journal du système</h1>
+            <p>Connecte-toi à un compte local.</p>
+          </div>
+        </div>
+
+        <p class="auth-message" id="auth-message">Les comptes restent dans ce navigateur. Ils ne sont pas synchronisés en ligne.</p>
+
+        <div class="auth-tabs" role="tablist" aria-label="Connexion ou création">
+          <button class="auth-tab active" data-auth-view="login-panel" type="button">Connexion</button>
+          <button class="auth-tab" data-auth-view="register-panel" type="button">Créer un compte</button>
+        </div>
+
+        <form class="auth-form auth-view active" id="login-panel">
+          <label>
+            Nom du compte
+            <input id="login-username" autocomplete="username" required />
+          </label>
+          <label>
+            Mot de passe
+            <input id="login-password" type="password" autocomplete="current-password" required />
+          </label>
+          <button class="primary-button" type="submit">Se connecter</button>
+        </form>
+
+        <form class="auth-form auth-view" id="register-panel">
+          <label>
+            Nom du compte
+            <input id="register-username" autocomplete="username" required />
+          </label>
+          <label>
+            Mot de passe
+            <input id="register-password" type="password" autocomplete="new-password" minlength="4" required />
+          </label>
+          <label>
+            Confirmer le mot de passe
+            <input id="register-confirm" type="password" autocomplete="new-password" minlength="4" required />
+          </label>
+          <button class="primary-button" type="submit">Créer le compte</button>
+        </form>
+      </div>
+    </section>
+
+    <div class="app-shell hidden" id="app-shell">
       <aside class="sidebar" aria-label="Navigation principale">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true">S</span>
@@ -27,6 +74,10 @@
         <section class="privacy-note">
           <strong>Confidentialité</strong>
           <p>Les données restent dans ce navigateur avec localStorage. Ce n'est pas un outil médical.</p>
+          <div class="account-box">
+            <span id="active-account">Compte local</span>
+            <button class="small-button" id="logout-button" type="button">Déconnexion</button>
+          </div>
         </section>
       </aside>
 
