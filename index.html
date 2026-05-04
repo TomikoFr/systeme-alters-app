@@ -13,11 +13,11 @@
           <span class="brand-mark" aria-hidden="true">S</span>
           <div>
             <h1>Journal du système</h1>
-            <p>Connecte-toi à un compte local.</p>
+            <p>Connecte-toi à ton compte en ligne.</p>
           </div>
         </div>
 
-        <p class="auth-message" id="auth-message">Les comptes restent dans ce navigateur. Ils ne sont pas synchronisés en ligne.</p>
+        <p class="auth-message" id="auth-message">Les données sont synchronisées avec Supabase après connexion.</p>
 
         <div class="auth-tabs" role="tablist" aria-label="Connexion ou création">
           <button class="auth-tab active" data-auth-view="login-panel" type="button">Connexion</button>
@@ -26,8 +26,8 @@
 
         <form class="auth-form auth-view active" id="login-panel">
           <label>
-            Nom du compte
-            <input id="login-username" autocomplete="username" required />
+            Email
+            <input id="login-username" type="email" autocomplete="email" required />
           </label>
           <label>
             Mot de passe
@@ -38,8 +38,8 @@
 
         <form class="auth-form auth-view" id="register-panel">
           <label>
-            Nom du compte
-            <input id="register-username" autocomplete="username" required />
+            Email
+            <input id="register-username" type="email" autocomplete="email" required />
           </label>
           <label>
             Mot de passe
@@ -73,9 +73,9 @@
 
         <section class="privacy-note">
           <strong>Confidentialité</strong>
-          <p>Les données restent dans ce navigateur avec localStorage. Ce n'est pas un outil médical.</p>
+          <p>Les données sont stockées dans Supabase avec une séparation par compte. Ce n'est pas un outil médical.</p>
           <div class="account-box">
-            <span id="active-account">Compte local</span>
+            <span id="active-account">Compte en ligne</span>
             <button class="small-button" id="logout-button" type="button">Déconnexion</button>
           </div>
         </section>
@@ -230,6 +230,7 @@
       </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>

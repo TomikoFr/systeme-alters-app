@@ -1,9 +1,9 @@
-const LEGACY_STORAGE_KEY = "systeme-alters-app";
-const ACCOUNTS_KEY = "systeme-alters-app:accounts";
-const SESSION_KEY = "systeme-alters-app:session";
-const DATA_PREFIX = "systeme-alters-app:data:";
+const SUPABASE_URL = "https://qypuxsaycserysutqhty.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_fjaREfJu0Y9rFjKkePYOkQ_rAZH3HPa";
 
-let currentAccount = null;
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+let currentUser = null;
 let state = { alters: [], fronts: [], notes: [] };
 
 const els = {
@@ -55,113 +55,20 @@ const els = {
 
 initialize();
 
-function loadState() {
-  const fallback = { alters: [], fronts: [], notes: [] };
-  if (!currentAccount) return fallback;
-
-  try {
-    const stored = localStorage.getItem(getAccountDataKey(currentAccount.id));
-    return stored ? JSON.parse(stored) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveState() {
-  if (!currentAccount) return;
-  localStorage.setItem(getAccountDataKey(currentAccount.id), JSON.stringify(state));
-}
-
-function getAccounts() {
-  try {
-    return JSON.parse(localStorage.getItem(ACCOUNTS_KEY)) || [];
-  } catch {
-    return [];
-  }
-}
-
-function saveAccounts(accounts) {
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
-}
-
-function getAccountDataKey(accountId) {
-  return `${DATA_PREFIX}${accountId}`;
-}
-
-function migrateLegacyDataIfNeeded() {
-  if (!currentAccount) return;
-  if (localStorage.getItem(getAccountDataKey(currentAccount.id))) return;
-
-  const legacyData = localStorage.getItem(LEGACY_STORAGE_KEY);
-  if (!legacyData) return;
-
-  try {
-    state = JSON.parse(legacyData);
-    saveState();
-  } catch {
-    state = { alters: [], fronts: [], notes: [] };
-  }
-}
-
-function initialize() {
+async function initialize() {
   wireEvents();
 
-  const sessionId = localStorage.getItem(SESSION_KEY);
-  const account = getAccounts().find((item) => item.id === sessionId);
+  const { data, error } = await db.auth.getSession();
+  if (error) {
+    showAuth(`Erreur de session : ${error.message}`);
+    return;
+  }
 
-  if (account) {
-    startSession(account);
+  if (data.session?.user) {
+    await startSession(data.session.user);
   } else {
     showAuth();
   }
-}
-
-function seedIfEmpty() {
-  if (state.alters.length || state.fronts.length || state.notes.length) return;
-
-  const now = new Date();
-  const hostId = makeId();
-  const protectorId = makeId();
-
-  state.alters.push(
-    {
-      id: hostId,
-      name: "Exemple - Hôte",
-      age: "adulte",
-      role: "organisation du quotidien",
-      color: "#3f7d68",
-      notes: "Remplace ces exemples par les membres de ton système.",
-      createdAt: now.toISOString(),
-    },
-    {
-      id: protectorId,
-      name: "Exemple - Protecteur",
-      age: "",
-      role: "sécurité et limites",
-      color: "#9f4f39",
-      notes: "Note ici les besoins, limites, préférences et déclencheurs utiles.",
-      createdAt: now.toISOString(),
-    }
-  );
-
-  state.fronts.push({
-    id: makeId(),
-    alterId: hostId,
-    time: toDateTimeInputValue(now),
-    presence: 3,
-    context: "Premier front d'exemple.",
-    createdAt: now.toISOString(),
-  });
-
-  state.notes.push({
-    id: makeId(),
-    title: "Bienvenue",
-    mood: "stable",
-    body: "Ce journal est local et modifiable. Il peut servir à garder une trace douce entre les membres du système.",
-    createdAt: now.toISOString(),
-  });
-
-  saveState();
 }
 
 function wireEvents() {
@@ -185,69 +92,27 @@ function wireEvents() {
     tab.addEventListener("click", () => setView(tab.dataset.view));
   });
 
-  els.alterForm.addEventListener("submit", (event) => {
+  els.alterForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const alter = {
-      id: els.alterId.value || makeId(),
-      name: els.alterName.value.trim(),
-      age: els.alterAge.value.trim(),
-      role: els.alterRole.value.trim(),
-      color: els.alterColor.value,
-      notes: els.alterNotes.value.trim(),
-      createdAt: new Date().toISOString(),
-    };
-
-    const existingIndex = state.alters.findIndex((item) => item.id === alter.id);
-    if (existingIndex >= 0) {
-      state.alters[existingIndex] = { ...state.alters[existingIndex], ...alter };
-    } else {
-      state.alters.unshift(alter);
-    }
-
-    saveState();
-    resetAlterForm();
-    render();
+    await saveAlter();
   });
 
   els.resetAlterForm.addEventListener("click", resetAlterForm);
 
-  els.frontForm.addEventListener("submit", (event) => {
+  els.frontForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    state.fronts.unshift({
-      id: makeId(),
-      alterId: els.frontAlter.value,
-      time: els.frontTime.value,
-      presence: Number(els.frontPresence.value),
-      context: els.frontContext.value.trim(),
-      createdAt: new Date().toISOString(),
-    });
-
-    saveState();
-    els.frontForm.reset();
-    els.frontTime.value = toDateTimeInputValue(new Date());
-    els.frontPresence.value = 3;
-    render();
+    await saveFront();
   });
 
-  els.noteForm.addEventListener("submit", (event) => {
+  els.noteForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    state.notes.unshift({
-      id: makeId(),
-      title: els.noteTitle.value.trim(),
-      mood: els.noteMood.value,
-      body: els.noteBody.value.trim(),
-      createdAt: new Date().toISOString(),
-    });
-
-    saveState();
-    els.noteForm.reset();
-    render();
+    await saveNote();
   });
 
   els.exportData.addEventListener("click", exportJson);
 }
 
-function showAuth(message = "Les comptes restent dans ce navigateur. Ils ne sont pas synchronisés en ligne.") {
+function showAuth(message = "Connecte-toi pour retrouver tes données depuis n'importe quel appareil.") {
   els.authScreen.classList.remove("hidden");
   els.appShell.classList.add("hidden");
   els.authMessage.textContent = message;
@@ -261,21 +126,21 @@ function showApp() {
 function setAuthView(id) {
   els.authTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.authView === id));
   els.authViews.forEach((view) => view.classList.toggle("active", view.id === id));
-  els.authMessage.textContent = "Les comptes restent dans ce navigateur. Ils ne sont pas synchronisés en ligne.";
+  els.authMessage.textContent = "Les données seront liées à ton email via Supabase.";
 }
 
 async function registerAccount() {
-  const username = normalizeUsername(els.registerUsername.value);
+  const email = normalizeEmail(els.registerUsername.value);
   const password = els.registerPassword.value;
   const confirm = els.registerConfirm.value;
 
-  if (!username) {
-    showAuthError("Choisis un nom de compte.");
+  if (!email) {
+    showAuthError("Entre une adresse email.");
     return;
   }
 
-  if (password.length < 4) {
-    showAuthError("Le mot de passe doit faire au moins 4 caractères.");
+  if (password.length < 6) {
+    showAuthError("Le mot de passe doit faire au moins 6 caractères.");
     return;
   }
 
@@ -284,75 +149,56 @@ async function registerAccount() {
     return;
   }
 
-  const accounts = getAccounts();
-  if (accounts.some((account) => normalizeUsername(account.username) === username)) {
-    showAuthError("Ce nom de compte existe déjà dans ce navigateur.");
+  const { data, error } = await db.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: window.location.href.split("#")[0],
+    },
+  });
+  if (error) {
+    showAuthError(error.message);
     return;
   }
 
-  const salt = makeId();
-  const passwordAlgorithm = canUseStrongHash() ? "sha256" : "fallback";
-  const account = {
-    id: makeId(),
-    username: username,
-    salt,
-    passwordAlgorithm,
-    passwordHash: await hashPassword(password, salt, passwordAlgorithm),
-    createdAt: new Date().toISOString(),
-  };
-
-  accounts.push(account);
-  saveAccounts(accounts);
-  currentAccount = account;
-  state = loadState();
-  migrateLegacyDataIfNeeded();
-  seedIfEmpty();
-  localStorage.setItem(SESSION_KEY, account.id);
   clearAuthForms();
-  showApp();
-  render();
+
+  if (data.session?.user) {
+    await startSession(data.session.user);
+  } else {
+    setAuthView("login-panel");
+    showAuth("Compte créé. Vérifie tes emails si Supabase demande une confirmation, puis connecte-toi.");
+  }
 }
 
 async function loginAccount() {
-  const username = normalizeUsername(els.loginUsername.value);
+  const email = normalizeEmail(els.loginUsername.value);
   const password = els.loginPassword.value;
-  const account = getAccounts().find((item) => normalizeUsername(item.username) === username);
 
-  if (!account) {
-    showAuthError("Compte introuvable dans ce navigateur.");
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if (error) {
+    showAuthError(error.message);
     return;
   }
 
-  if ((account.passwordAlgorithm || "sha256") === "sha256" && !canUseStrongHash()) {
-    showAuthError("Ce navigateur ne peut pas vérifier ce mot de passe. Ouvre l'app via GitHub Pages.");
-    return;
-  }
-
-  const passwordHash = await hashPassword(password, account.salt, account.passwordAlgorithm || "sha256");
-  if (passwordHash !== account.passwordHash) {
-    showAuthError("Mot de passe incorrect.");
-    return;
-  }
-
-  startSession(account);
   clearAuthForms();
+  await startSession(data.user);
 }
 
-function startSession(account) {
-  currentAccount = account;
-  state = loadState();
-  seedIfEmpty();
-  localStorage.setItem(SESSION_KEY, account.id);
-  els.activeAccount.textContent = `Compte : ${account.username}`;
+async function startSession(user) {
+  currentUser = user;
+  els.activeAccount.textContent = `Compte : ${user.email}`;
   showApp();
+  await loadRemoteState();
+  await seedIfEmpty();
   render();
 }
 
-function logoutAccount() {
-  localStorage.removeItem(SESSION_KEY);
-  currentAccount = null;
+async function logoutAccount() {
+  await db.auth.signOut();
+  currentUser = null;
   state = { alters: [], fronts: [], notes: [] };
-  showAuth("Tu es déconnecté de ce compte local.");
+  showAuth("Tu es déconnecté.");
 }
 
 function showAuthError(message) {
@@ -364,35 +210,139 @@ function clearAuthForms() {
   els.registerForm.reset();
 }
 
-function normalizeUsername(value) {
-  return value.trim().toLowerCase();
-}
+async function loadRemoteState() {
+  const [altersResult, frontsResult, notesResult] = await Promise.all([
+    db.from("alters").select("*").order("created_at", { ascending: false }),
+    db.from("fronts").select("*").order("time", { ascending: false }),
+    db.from("notes").select("*").order("created_at", { ascending: false }),
+  ]);
 
-function canUseStrongHash() {
-  return Boolean(globalThis.crypto?.subtle && globalThis.TextEncoder);
-}
-
-async function hashPassword(password, salt, algorithm = "sha256") {
-  const payload = `${salt}:${password}`;
-
-  if (algorithm === "sha256" && canUseStrongHash()) {
-    const bytes = new TextEncoder().encode(payload);
-    const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", bytes);
-    return [...new Uint8Array(hashBuffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  const error = altersResult.error || frontsResult.error || notesResult.error;
+  if (error) {
+    showAuthError(`Erreur Supabase : ${error.message}. As-tu exécuté supabase.sql ?`);
+    return;
   }
 
-  return fallbackHash(payload);
+  state = {
+    alters: altersResult.data.map(mapAlterFromDb),
+    fronts: frontsResult.data.map(mapFrontFromDb),
+    notes: notesResult.data.map(mapNoteFromDb),
+  };
 }
 
-function fallbackHash(value) {
-  let hash = 2166136261;
+async function seedIfEmpty() {
+  if (state.alters.length || state.fronts.length || state.notes.length) return;
 
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
+  const now = new Date();
+
+  const { data: alters, error: altersError } = await db
+    .from("alters")
+    .insert([
+      {
+        name: "Exemple - Hôte",
+        age: "adulte",
+        role: "organisation du quotidien",
+        color: "#3f7d68",
+        notes: "Remplace ces exemples par les membres de ton système.",
+      },
+      {
+        name: "Exemple - Protecteur",
+        age: "",
+        role: "sécurité et limites",
+        color: "#9f4f39",
+        notes: "Note ici les besoins, limites, préférences et déclencheurs utiles.",
+      },
+    ])
+    .select();
+
+  if (altersError) {
+    showAuthError(`Erreur Supabase : ${altersError.message}`);
+    return;
   }
 
-  return `fallback-${(hash >>> 0).toString(16)}`;
+  await Promise.all([
+    db.from("fronts").insert({
+      alter_id: alters[0].id,
+      time: now.toISOString(),
+      presence: 3,
+      context: "Premier front d'exemple.",
+    }),
+    db.from("notes").insert({
+      title: "Bienvenue",
+      mood: "stable",
+      body: "Ce journal est synchronisé avec Supabase. Tu peux le retrouver après connexion.",
+    }),
+  ]);
+
+  await loadRemoteState();
+}
+
+async function saveAlter() {
+  const id = els.alterId.value;
+  const payload = {
+    name: els.alterName.value.trim(),
+    age: els.alterAge.value.trim(),
+    role: els.alterRole.value.trim(),
+    color: els.alterColor.value,
+    notes: els.alterNotes.value.trim(),
+  };
+
+  const result = id
+    ? await db.from("alters").update(payload).eq("id", id)
+    : await db.from("alters").insert(payload);
+
+  if (result.error) {
+    alert(`Erreur Supabase : ${result.error.message}`);
+    return;
+  }
+
+  resetAlterForm();
+  await refreshAndRender();
+}
+
+async function saveFront() {
+  if (!els.frontAlter.value) {
+    alert("Ajoute d'abord un alter avant d'ajouter un front.");
+    return;
+  }
+
+  const { error } = await db.from("fronts").insert({
+    alter_id: els.frontAlter.value,
+    time: new Date(els.frontTime.value).toISOString(),
+    presence: Number(els.frontPresence.value),
+    context: els.frontContext.value.trim(),
+  });
+
+  if (error) {
+    alert(`Erreur Supabase : ${error.message}`);
+    return;
+  }
+
+  els.frontForm.reset();
+  els.frontTime.value = toDateTimeInputValue(new Date());
+  els.frontPresence.value = 3;
+  await refreshAndRender();
+}
+
+async function saveNote() {
+  const { error } = await db.from("notes").insert({
+    title: els.noteTitle.value.trim(),
+    mood: els.noteMood.value,
+    body: els.noteBody.value.trim(),
+  });
+
+  if (error) {
+    alert(`Erreur Supabase : ${error.message}`);
+    return;
+  }
+
+  els.noteForm.reset();
+  await refreshAndRender();
+}
+
+async function refreshAndRender() {
+  await loadRemoteState();
+  render();
 }
 
 function setView(id) {
@@ -410,9 +360,9 @@ function render() {
 }
 
 function renderAlterOptions() {
-  els.frontAlter.innerHTML = state.alters
-    .map((alter) => `<option value="${escapeAttr(alter.id)}">${escapeHtml(alter.name)}</option>`)
-    .join("");
+  els.frontAlter.innerHTML = state.alters.length
+    ? state.alters.map((alter) => `<option value="${escapeAttr(alter.id)}">${escapeHtml(alter.name)}</option>`).join("")
+    : '<option value="">Aucun alter disponible</option>';
 }
 
 function renderDashboard() {
@@ -541,16 +491,20 @@ function editAlter(id) {
   els.alterName.focus();
 }
 
-function deleteAlter(id) {
+async function deleteAlter(id) {
   const alter = state.alters.find((item) => item.id === id);
   if (!alter) return;
 
   const confirmed = confirm(`Supprimer ${alter.name} ? Les fronts liés resteront dans l'historique.`);
   if (!confirmed) return;
 
-  state.alters = state.alters.filter((item) => item.id !== id);
-  saveState();
-  render();
+  const { error } = await db.from("alters").delete().eq("id", id);
+  if (error) {
+    alert(`Erreur Supabase : ${error.message}`);
+    return;
+  }
+
+  await refreshAndRender();
 }
 
 function bindFrontDeleteButtons(container) {
@@ -559,16 +513,20 @@ function bindFrontDeleteButtons(container) {
   });
 }
 
-function deleteFront(id) {
+async function deleteFront(id) {
   const front = state.fronts.find((item) => item.id === id);
   if (!front) return;
 
   const confirmed = confirm(`Supprimer ce front de ${getAlterName(front.alterId)} ?`);
   if (!confirmed) return;
 
-  state.fronts = state.fronts.filter((item) => item.id !== id);
-  saveState();
-  render();
+  const { error } = await db.from("fronts").delete().eq("id", id);
+  if (error) {
+    alert(`Erreur Supabase : ${error.message}`);
+    return;
+  }
+
+  await refreshAndRender();
 }
 
 function resetAlterForm() {
@@ -585,14 +543,6 @@ function exportJson() {
   link.download = `journal-systeme-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   URL.revokeObjectURL(url);
-}
-
-function makeId() {
-  if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function sortedFronts() {
@@ -613,6 +563,43 @@ function formatDate(value) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function normalizeEmail(value) {
+  return value.trim().toLowerCase();
+}
+
+function mapAlterFromDb(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    age: row.age || "",
+    role: row.role || "",
+    color: row.color || "#3f7d68",
+    notes: row.notes || "",
+    createdAt: row.created_at,
+  };
+}
+
+function mapFrontFromDb(row) {
+  return {
+    id: row.id,
+    alterId: row.alter_id,
+    time: row.time,
+    presence: row.presence,
+    context: row.context || "",
+    createdAt: row.created_at,
+  };
+}
+
+function mapNoteFromDb(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    mood: row.mood,
+    body: row.body,
+    createdAt: row.created_at,
+  };
 }
 
 function emptyState(text) {

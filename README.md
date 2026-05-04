@@ -1,30 +1,43 @@
-# Journal du système
+# Journal du systeme
 
-Petite app locale en français pour suivre les alters d'un système TDI, les fronts/co-fronts et un journal partagé.
+App web en francais pour suivre les alters d'un systeme TDI, les fronts/co-fronts et un journal partage.
 
 ## Lancer l'app
 
-Ouvre `index.html` dans ton navigateur.
+Ouvre `index.html` dans ton navigateur, ou utilise la version GitHub Pages.
 
-Les données sont stockées dans le `localStorage` du navigateur. Elles restent donc sur cet ordinateur et dans ce profil de navigateur, sauf si tu utilises le bouton d'export.
+## Configuration Supabase
+
+Avant d'utiliser l'app en ligne, execute le fichier `supabase.sql` dans Supabase :
+
+1. Ouvre ton projet Supabase.
+2. Va dans `SQL Editor`.
+3. Colle le contenu de `supabase.sql`.
+4. Clique sur `Run`.
+
+Le script cree les tables `alters`, `fronts` et `notes`, active Row Level Security, puis ajoute les regles pour que chaque compte voie uniquement ses propres donnees.
+
+Dans Supabase, verifie aussi `Authentication` > `URL Configuration` :
+
+- `Site URL` : l'URL GitHub Pages de l'app.
+- `Redirect URLs` : ajoute aussi cette meme URL.
 
 ## Fonctions
 
-- Comptes locaux avec page de connexion.
-- Tableau de bord avec front actuel, nombre d'alters et dernière note.
-- Répertoire des alters avec nom, âge, rôle, couleur et notes.
-- Suivi des fronts avec date, intensité de présence et contexte.
-- Journal partagé avec humeur et notes.
+- Connexion et creation de compte avec Supabase Auth.
+- Donnees synchronisees entre appareils apres connexion.
+- Tableau de bord avec front actuel, nombre d'alters et derniere note.
+- Repertoire des alters avec nom, age, role, couleur et notes.
+- Suivi des fronts avec date, intensite de presence et contexte.
+- Journal partage avec humeur et notes.
 - Export JSON pour faire une sauvegarde.
 
-## Comptes
+## Securite
 
-Les comptes sont stockés dans le navigateur avec `localStorage`. Ils servent à séparer plusieurs espaces de données sur le même appareil ou navigateur.
+La cle Supabase utilisee dans `app.js` est une cle publishable, prevue pour etre visible dans le navigateur. Les donnees restent protegees par les policies RLS dans `supabase.sql`.
 
-Sur GitHub Pages, il n'y a pas de serveur ni de base de données distante : un compte créé sur un navigateur ne sera pas automatiquement disponible sur un autre ordinateur ou téléphone.
-
-Les mots de passe sont hachés côté navigateur quand l'API crypto est disponible. Ce système protège surtout contre les accès accidentels sur le même navigateur ; il ne remplace pas une vraie authentification serveur.
+Ne publie jamais la cle `secret` ou `service_role`.
 
 ## Note importante
 
-Cette app est un outil personnel d'organisation. Elle ne remplace pas un suivi médical ou thérapeutique.
+Cette app est un outil personnel d'organisation. Elle ne remplace pas un suivi medical ou therapeutique.
