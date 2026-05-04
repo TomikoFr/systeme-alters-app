@@ -41,6 +41,8 @@ Depuis le site, clique sur `Lier Discord` pour generer un code temporaire. Dans 
 /lier code:<code>
 ```
 
+Reviens ensuite sur le site et clique sur `Verifier Discord` pour mettre le statut a jour.
+
 Le code expire apres 10 minutes.
 
 ## Securite

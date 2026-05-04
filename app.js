@@ -22,6 +22,8 @@ const els = {
   registerConfirm: document.querySelector("#register-confirm"),
   activeAccount: document.querySelector("#active-account"),
   discordLinkButton: document.querySelector("#discord-link-button"),
+  discordLinkRefresh: document.querySelector("#discord-link-refresh"),
+  discordLinkStatus: document.querySelector("#discord-link-status"),
   discordLinkCode: document.querySelector("#discord-link-code"),
   logoutButton: document.querySelector("#logout-button"),
   tabs: document.querySelectorAll(".nav-tab"),
@@ -92,6 +94,7 @@ function wireEvents() {
 
   els.logoutButton.addEventListener("click", logoutAccount);
   els.discordLinkButton.addEventListener("click", generateDiscordLinkCode);
+  els.discordLinkRefresh.addEventListener("click", loadDiscordLinkStatus);
 
   els.tabs.forEach((tab) => {
     tab.addEventListener("click", () => setView(tab.dataset.view));
@@ -195,6 +198,7 @@ async function startSession(user) {
   els.activeAccount.textContent = `Compte : ${user.email}`;
   showApp();
   await loadRemoteState();
+  await loadDiscordLinkStatus();
   await seedIfEmpty();
   render();
 }
@@ -205,6 +209,7 @@ async function logoutAccount() {
   state = { alters: [], fronts: [], notes: [] };
   els.discordLinkCode.classList.add("hidden");
   els.discordLinkCode.textContent = "";
+  els.discordLinkStatus.textContent = "Discord : non connecté";
   showAuth("Tu es déconnecté.");
 }
 
@@ -220,6 +225,7 @@ function clearAuthForms() {
 async function generateDiscordLinkCode() {
   if (!currentUser) return;
 
+  els.discordLinkStatus.textContent = "Discord : code en attente";
   const code = makeLinkCode();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
@@ -237,6 +243,31 @@ async function generateDiscordLinkCode() {
 
   els.discordLinkCode.textContent = `Code Discord : ${code} · commande : /lier code:${code}`;
   els.discordLinkCode.classList.remove("hidden");
+}
+
+async function loadDiscordLinkStatus() {
+  if (!currentUser) return;
+
+  const { data, error } = await db
+    .from("discord_links")
+    .select("discord_user_id, created_at")
+    .eq("user_id", currentUser.id)
+    .maybeSingle();
+
+  if (error) {
+    els.discordLinkStatus.textContent = `Discord : erreur (${error.message})`;
+    return;
+  }
+
+  if (!data) {
+    els.discordLinkStatus.textContent = "Discord : non lié";
+    return;
+  }
+
+  const shortId = data.discord_user_id.slice(-4);
+  els.discordLinkStatus.textContent = `Discord : lié (…${shortId})`;
+  els.discordLinkCode.classList.add("hidden");
+  els.discordLinkCode.textContent = "";
 }
 
 async function loadRemoteState() {
