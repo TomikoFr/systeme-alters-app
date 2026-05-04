@@ -1,0 +1,12 @@
+# Donnees exportees depuis l'app
+journal-systeme-*.json
+*.backup.json
+
+# Fichiers systeme et editeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs temporaires
+*.log

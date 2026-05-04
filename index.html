@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Journal du système</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navigation principale">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">S</span>
+          <div>
+            <h1>Journal du système</h1>
+            <p>Suivi privé des alters, fronts et notes.</p>
+          </div>
+        </div>
+
+        <nav class="nav-tabs" aria-label="Sections">
+          <button class="nav-tab active" data-view="dashboard" type="button">Tableau</button>
+          <button class="nav-tab" data-view="alters" type="button">Alters</button>
+          <button class="nav-tab" data-view="fronts" type="button">Fronts</button>
+          <button class="nav-tab" data-view="journal" type="button">Journal</button>
+        </nav>
+
+        <section class="privacy-note">
+          <strong>Confidentialité</strong>
+          <p>Les données restent dans ce navigateur avec localStorage. Ce n'est pas un outil médical.</p>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <section class="view active" id="dashboard" aria-labelledby="dashboard-title">
+          <div class="view-header">
+            <div>
+              <p class="eyebrow">Vue d'ensemble</p>
+              <h2 id="dashboard-title">Etat actuel du système</h2>
+            </div>
+            <button class="ghost-button" id="export-data" type="button">Exporter</button>
+          </div>
+
+          <div class="status-grid">
+            <article class="status-panel">
+              <span class="panel-label">Front actuel</span>
+              <strong id="current-front">Non renseigné</strong>
+              <p id="current-front-detail">Ajoute un front pour voir qui est présent.</p>
+            </article>
+            <article class="status-panel">
+              <span class="panel-label">Alters suivis</span>
+              <strong id="alter-count">0</strong>
+              <p>Profils enregistrés localement.</p>
+            </article>
+            <article class="status-panel">
+              <span class="panel-label">Dernière note</span>
+              <strong id="last-note-title">Aucune</strong>
+              <p id="last-note-date">Le journal est vide.</p>
+            </article>
+          </div>
+
+          <section class="split-layout">
+            <div>
+              <h3>Alters proches</h3>
+              <div class="compact-list" id="recent-alters"></div>
+            </div>
+            <div>
+              <h3>Timeline récente</h3>
+              <div class="timeline" id="recent-timeline"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="alters" aria-labelledby="alters-title">
+          <div class="view-header">
+            <div>
+              <p class="eyebrow">Répertoire</p>
+              <h2 id="alters-title">Alters</h2>
+            </div>
+          </div>
+
+          <form class="editor-form" id="alter-form">
+            <input type="hidden" id="alter-id" />
+            <label>
+              Nom
+              <input id="alter-name" autocomplete="off" required />
+            </label>
+            <label>
+              Age ou tranche d'âge
+              <input id="alter-age" autocomplete="off" />
+            </label>
+            <label>
+              Rôle
+              <input id="alter-role" autocomplete="off" placeholder="protecteur, hôte, soignant..." />
+            </label>
+            <label>
+              Couleur
+              <input id="alter-color" type="color" value="#3f7d68" />
+            </label>
+            <label class="wide">
+              Besoins, limites, déclencheurs utiles
+              <textarea id="alter-notes" rows="4"></textarea>
+            </label>
+            <div class="form-actions wide">
+              <button class="primary-button" type="submit">Enregistrer</button>
+              <button class="ghost-button" id="reset-alter-form" type="button">Nouveau</button>
+            </div>
+          </form>
+
+          <div class="card-grid" id="alter-list"></div>
+        </section>
+
+        <section class="view" id="fronts" aria-labelledby="fronts-title">
+          <div class="view-header">
+            <div>
+              <p class="eyebrow">Présence</p>
+              <h2 id="fronts-title">Fronts et co-fronts</h2>
+            </div>
+          </div>
+
+          <form class="editor-form" id="front-form">
+            <label>
+              Alter au front
+              <select id="front-alter" required></select>
+            </label>
+            <label>
+              Moment
+              <input id="front-time" type="datetime-local" required />
+            </label>
+            <label>
+              Intensité de présence
+              <input id="front-presence" type="range" min="1" max="5" value="3" />
+            </label>
+            <label class="wide">
+              Contexte
+              <textarea id="front-context" rows="3" placeholder="lieu, émotion, fatigue, déclencheur possible..."></textarea>
+            </label>
+            <div class="form-actions wide">
+              <button class="primary-button" type="submit">Ajouter le front</button>
+            </div>
+          </form>
+
+          <div class="timeline" id="front-list"></div>
+        </section>
+
+        <section class="view" id="journal" aria-labelledby="journal-title">
+          <div class="view-header">
+            <div>
+              <p class="eyebrow">Notes</p>
+              <h2 id="journal-title">Journal partagé</h2>
+            </div>
+          </div>
+
+          <form class="editor-form" id="note-form">
+            <label>
+              Titre
+              <input id="note-title" autocomplete="off" required />
+            </label>
+            <label>
+              Humeur générale
+              <select id="note-mood">
+                <option>stable</option>
+                <option>fatigué</option>
+                <option>anxieux</option>
+                <option>dissocié</option>
+                <option>apaisé</option>
+              </select>
+            </label>
+            <label class="wide">
+              Note
+              <textarea id="note-body" rows="5" required></textarea>
+            </label>
+            <div class="form-actions wide">
+              <button class="primary-button" type="submit">Ajouter la note</button>
+            </div>
+          </form>
+
+          <div class="note-list" id="note-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
