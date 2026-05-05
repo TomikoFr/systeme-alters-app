@@ -27,11 +27,11 @@ Dans Supabase, verifie aussi `Authentication` > `URL Configuration` :
 - Connexion et creation de compte avec Supabase Auth.
 - Liaison Discord par code temporaire.
 - Donnees synchronisees entre appareils apres connexion.
+- Import JSON Simply Plural pour recuperer les membres et fronts reconnus.
 - Tableau de bord avec front actuel, nombre d'alters et derniere note.
 - Repertoire des alters avec nom, age, role, couleur, photo et notes.
 - Suivi des fronts avec date, intensite de presence et contexte.
 - Journal partage avec humeur et notes.
-- Export JSON pour faire une sauvegarde.
 
 ## Lier Discord
 

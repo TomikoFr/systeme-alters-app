@@ -38,6 +38,9 @@ const els = {
   alterNotes: document.querySelector("#alter-notes"),
   resetAlterForm: document.querySelector("#reset-alter-form"),
   alterList: document.querySelector("#alter-list"),
+  spImportFile: document.querySelector("#sp-import-file"),
+  spImportButton: document.querySelector("#sp-import-button"),
+  spImportStatus: document.querySelector("#sp-import-status"),
   frontForm: document.querySelector("#front-form"),
   frontAlter: document.querySelector("#front-alter"),
   frontTime: document.querySelector("#front-time"),
@@ -56,7 +59,6 @@ const els = {
   lastNoteDate: document.querySelector("#last-note-date"),
   recentAlters: document.querySelector("#recent-alters"),
   recentTimeline: document.querySelector("#recent-timeline"),
-  exportData: document.querySelector("#export-data"),
 };
 
 initialize();
@@ -106,6 +108,7 @@ function wireEvents() {
   });
 
   els.resetAlterForm.addEventListener("click", resetAlterForm);
+  els.spImportButton.addEventListener("click", importSimplyPlural);
 
   els.frontForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -117,7 +120,6 @@ function wireEvents() {
     await saveNote();
   });
 
-  els.exportData.addEventListener("click", exportJson);
 }
 
 function showAuth(message = "Connecte-toi pour retrouver tes données depuis n'importe quel appareil.") {
@@ -389,6 +391,102 @@ async function saveFront() {
   await refreshAndRender();
 }
 
+async function importSimplyPlural() {
+  const file = els.spImportFile.files?.[0];
+  if (!file) {
+    els.spImportStatus.textContent = "Choisis d'abord un fichier JSON.";
+    return;
+  }
+
+  try {
+    els.spImportStatus.textContent = "Lecture de l'export...";
+    const simplyPluralData = JSON.parse(await file.text());
+    const members = findSimplyPluralMembers(simplyPluralData);
+    const frontHistory = findSimplyPluralFrontHistory(simplyPluralData);
+
+    if (!members.length && !frontHistory.length) {
+      els.spImportStatus.textContent = "Aucun membre ou front Simply Plural reconnu dans ce fichier.";
+      return;
+    }
+
+    const importedAlters = await importSimplyPluralMembers(members);
+    const importedFronts = await importSimplyPluralFronts(frontHistory, importedAlters);
+
+    await refreshAndRender();
+    els.spImportStatus.textContent = `Import terminé : ${importedAlters.length} alter(s), ${importedFronts} front(s).`;
+  } catch (error) {
+    console.error(error);
+    els.spImportStatus.textContent = `Import impossible : ${error.message}`;
+  }
+}
+
+async function importSimplyPluralMembers(members) {
+  const existingByName = new Map(state.alters.map((alter) => [normalizeName(alter.name), alter]));
+  const rows = [];
+  const imported = [];
+
+  for (const member of members) {
+    const name = readFirstString(member, ["name", "displayName", "nickname"]);
+    if (!name) continue;
+
+    const existing = existingByName.get(normalizeName(name));
+    const color = normalizeColor(readFirstString(member, ["color", "colour", "colorHex"])) || existing?.color || "#3f7d68";
+    const notes = readFirstString(member, ["desc", "description", "notes", "info"]) || existing?.notes || "";
+    const role = readFirstString(member, ["role", "proxyName", "pronouns"]) || existing?.role || "";
+    const age = readFirstString(member, ["age", "birthday"]) || existing?.age || "";
+    const id = existing?.id || makeId();
+
+    rows.push({
+      id,
+      name,
+      age,
+      role,
+      color,
+      notes,
+      photo_path: existing?.photoPath || "",
+    });
+
+    imported.push({ id, name, sourceId: member.id || member.uuid || member.uid || member.memberId });
+  }
+
+  if (!rows.length) return [];
+
+  const { error } = await db.from("alters").upsert(rows, { onConflict: "id" });
+  if (error) throw error;
+
+  return imported;
+}
+
+async function importSimplyPluralFronts(frontHistory, importedAlters) {
+  if (!frontHistory.length) return 0;
+
+  const alterBySourceId = new Map(importedAlters.filter((alter) => alter.sourceId).map((alter) => [String(alter.sourceId), alter]));
+  const alterByName = new Map(importedAlters.map((alter) => [normalizeName(alter.name), alter]));
+  const rows = [];
+
+  for (const entry of frontHistory) {
+    const alter = findFrontAlter(entry, alterBySourceId, alterByName);
+    if (!alter) continue;
+
+    const time = readDate(entry, ["time", "timestamp", "startTime", "start", "startedAt", "createdAt"]);
+    if (!time) continue;
+
+    rows.push({
+      alter_id: alter.id,
+      time: time.toISOString(),
+      presence: 3,
+      context: readFirstString(entry, ["comment", "note", "notes", "customStatus", "status"]) || "Import Simply Plural",
+    });
+  }
+
+  if (!rows.length) return 0;
+
+  const { error } = await db.from("fronts").insert(rows);
+  if (error) throw error;
+
+  return rows.length;
+}
+
 async function saveNote() {
   const { error } = await db.from("notes").insert({
     title: els.noteTitle.value.trim(),
@@ -638,16 +736,6 @@ async function uploadAlterPhoto(alterId, previousPath) {
   return path;
 }
 
-function exportJson() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `journal-systeme-${new Date().toISOString().slice(0, 10)}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 function sortedFronts() {
   return [...state.fronts].sort((a, b) => new Date(b.time) - new Date(a.time));
 }
@@ -670,6 +758,80 @@ function formatDate(value) {
 
 function normalizeEmail(value) {
   return value.trim().toLowerCase();
+}
+
+function findSimplyPluralMembers(data) {
+  return findFirstArray(data, ["members", "memberships", "alters", "profiles"]);
+}
+
+function findSimplyPluralFrontHistory(data) {
+  return findFirstArray(data, ["frontHistory", "front_history", "fronters", "fronts", "switches"]);
+}
+
+function findFirstArray(value, keys) {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object") return [];
+
+  for (const key of keys) {
+    if (Array.isArray(value[key])) return value[key];
+  }
+
+  for (const nested of Object.values(value)) {
+    const found = findFirstArray(nested, keys);
+    if (found.length) return found;
+  }
+
+  return [];
+}
+
+function findFrontAlter(entry, alterBySourceId, alterByName) {
+  const sourceId = readFirstString(entry, ["member", "memberId", "member_id", "alter", "alterId", "profileId", "id"]);
+  if (sourceId && alterBySourceId.has(String(sourceId))) return alterBySourceId.get(String(sourceId));
+
+  const name = readFirstString(entry, ["name", "memberName", "alterName", "profileName"]);
+  if (name && alterByName.has(normalizeName(name))) return alterByName.get(normalizeName(name));
+
+  const nestedMember = entry.member || entry.alter || entry.profile;
+  if (nestedMember && typeof nestedMember === "object") {
+    const nestedId = readFirstString(nestedMember, ["id", "uuid", "uid", "memberId"]);
+    if (nestedId && alterBySourceId.has(String(nestedId))) return alterBySourceId.get(String(nestedId));
+
+    const nestedName = readFirstString(nestedMember, ["name", "displayName", "nickname"]);
+    if (nestedName && alterByName.has(normalizeName(nestedName))) return alterByName.get(normalizeName(nestedName));
+  }
+
+  return null;
+}
+
+function readFirstString(object, keys) {
+  if (!object || typeof object !== "object") return "";
+
+  for (const key of keys) {
+    const value = object[key];
+    if (value === null || value === undefined) continue;
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number") return String(value);
+  }
+
+  return "";
+}
+
+function readDate(object, keys) {
+  const rawValue = readFirstString(object, keys);
+  if (!rawValue) return null;
+
+  const date = new Date(rawValue);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function normalizeName(value) {
+  return value.trim().toLowerCase();
+}
+
+function normalizeColor(value) {
+  if (!value) return "";
+  const color = value.startsWith("#") ? value : `#${value}`;
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : "";
 }
 
 async function mapAlterFromDb(row) {

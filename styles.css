@@ -255,6 +255,7 @@ h3 {
 .status-panel,
 .split-layout > div,
 .editor-form,
+.import-panel,
 .alter-card,
 .note-card,
 .timeline-item {
@@ -292,6 +293,25 @@ h3 {
   gap: 16px;
   margin-bottom: 22px;
   padding: 18px;
+}
+
+.import-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px) auto;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding: 18px;
+}
+
+.import-panel p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.import-status {
+  grid-column: 1 / -1;
 }
 
 label {
@@ -511,7 +531,8 @@ textarea {
 
   .status-grid,
   .split-layout,
-  .editor-form {
+  .editor-form,
+  .import-panel {
     grid-template-columns: 1fr;
   }
 }

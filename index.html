@@ -92,7 +92,6 @@
               <p class="eyebrow">Vue d'ensemble</p>
               <h2 id="dashboard-title">Etat actuel du système</h2>
             </div>
-            <button class="ghost-button" id="export-data" type="button">Exporter</button>
           </div>
 
           <div class="status-grid">
@@ -132,6 +131,19 @@
               <h2 id="alters-title">Alters</h2>
             </div>
           </div>
+
+          <section class="import-panel">
+            <div>
+              <h3>Importer Simply Plural</h3>
+              <p>Choisis un export JSON Simply Plural pour importer les membres et, si présent, l'historique de front.</p>
+            </div>
+            <label>
+              Fichier JSON
+              <input id="sp-import-file" type="file" accept="application/json,.json" />
+            </label>
+            <button class="primary-button" id="sp-import-button" type="button">Importer</button>
+            <p class="import-status" id="sp-import-status">Aucun fichier sélectionné.</p>
+          </section>
 
           <form class="editor-form" id="alter-form">
             <input type="hidden" id="alter-id" />
