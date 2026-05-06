@@ -228,6 +228,7 @@
           </div>
 
           <form class="editor-form" id="note-form">
+            <input type="hidden" id="note-id" />
             <label>
               Titre
               <input id="note-title" autocomplete="off" required />
@@ -247,7 +248,8 @@
               <textarea id="note-body" rows="5" required></textarea>
             </label>
             <div class="form-actions wide">
-              <button class="primary-button" type="submit">Ajouter la note</button>
+              <button class="primary-button" type="submit">Enregistrer</button>
+              <button class="ghost-button" id="reset-note-form" type="button">Nouveau</button>
             </div>
           </form>
 

@@ -48,9 +48,11 @@ const els = {
   frontContext: document.querySelector("#front-context"),
   frontList: document.querySelector("#front-list"),
   noteForm: document.querySelector("#note-form"),
+  noteId: document.querySelector("#note-id"),
   noteTitle: document.querySelector("#note-title"),
   noteMood: document.querySelector("#note-mood"),
   noteBody: document.querySelector("#note-body"),
+  resetNoteForm: document.querySelector("#reset-note-form"),
   noteList: document.querySelector("#note-list"),
   currentFront: document.querySelector("#current-front"),
   currentFrontDetail: document.querySelector("#current-front-detail"),
@@ -84,42 +86,63 @@ function wireEvents() {
     tab.addEventListener("click", () => setAuthView(tab.dataset.authView));
   });
 
-  els.loginForm.addEventListener("submit", async (event) => {
+  els.loginForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    await loginAccount();
+    runBusy(els.loginForm.querySelector("[type=submit]"), "Connexion…", loginAccount);
   });
 
-  els.registerForm.addEventListener("submit", async (event) => {
+  els.registerForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    await registerAccount();
+    runBusy(els.registerForm.querySelector("[type=submit]"), "Création…", registerAccount);
   });
 
   els.logoutButton.addEventListener("click", logoutAccount);
-  els.discordLinkButton.addEventListener("click", generateDiscordLinkCode);
-  els.discordLinkRefresh.addEventListener("click", loadDiscordLinkStatus);
+  els.discordLinkButton.addEventListener("click", () => {
+    runBusy(els.discordLinkButton, "Génération…", generateDiscordLinkCode);
+  });
+  els.discordLinkRefresh.addEventListener("click", () => {
+    runBusy(els.discordLinkRefresh, "Vérification…", loadDiscordLinkStatus);
+  });
 
   els.tabs.forEach((tab) => {
     tab.addEventListener("click", () => setView(tab.dataset.view));
   });
 
-  els.alterForm.addEventListener("submit", async (event) => {
+  els.alterForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    await saveAlter();
+    runBusy(els.alterForm.querySelector("[type=submit]"), "Enregistrement…", saveAlter);
   });
 
   els.resetAlterForm.addEventListener("click", resetAlterForm);
-  els.spImportButton.addEventListener("click", importSimplyPlural);
-
-  els.frontForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    await saveFront();
+  els.spImportButton.addEventListener("click", () => {
+    runBusy(els.spImportButton, "Import…", importSimplyPlural);
   });
 
-  els.noteForm.addEventListener("submit", async (event) => {
+  els.frontForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    await saveNote();
+    runBusy(els.frontForm.querySelector("[type=submit]"), "Enregistrement…", saveFront);
   });
 
+  els.noteForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    runBusy(els.noteForm.querySelector("[type=submit]"), "Enregistrement…", saveNote);
+  });
+
+  els.resetNoteForm.addEventListener("click", resetNoteForm);
+
+}
+
+async function runBusy(button, busyText, fn) {
+  if (!button) return fn();
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = busyText;
+  try {
+    return await fn();
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
 }
 
 function showAuth(message = "Connecte-toi pour retrouver tes données depuis n'importe quel appareil.") {
@@ -528,18 +551,23 @@ async function importSimplyPluralFronts(frontHistory, importedAlters) {
 }
 
 async function saveNote() {
-  const { error } = await db.from("notes").insert({
+  const id = els.noteId.value;
+  const payload = {
     title: els.noteTitle.value.trim(),
     mood: els.noteMood.value,
     body: els.noteBody.value.trim(),
-  });
+  };
 
-  if (error) {
-    alert(`Erreur Supabase : ${error.message}`);
+  const result = id
+    ? await db.from("notes").update(payload).eq("id", id)
+    : await db.from("notes").insert(payload);
+
+  if (result.error) {
+    alert(`Erreur Supabase : ${result.error.message}`);
     return;
   }
 
-  els.noteForm.reset();
+  resetNoteForm();
   await refreshAndRender();
 }
 
@@ -596,7 +624,8 @@ function readSelectedFrontEntries() {
 }
 
 function renderDashboard() {
-  const latestFront = sortedFronts()[0];
+  const fronts = sortedFronts();
+  const latestFront = fronts[0];
   const latestNote = state.notes[0];
 
   els.alterCount.textContent = state.alters.length;
@@ -612,8 +641,8 @@ function renderDashboard() {
     ? state.alters.slice(0, 5).map(renderCompactAlter).join("")
     : emptyState("Aucun alter enregistré.");
 
-  els.recentTimeline.innerHTML = sortedFronts().length
-    ? sortedFronts().slice(0, 5).map(renderTimelineItem).join("")
+  els.recentTimeline.innerHTML = fronts.length
+    ? fronts.slice(0, 5).map(renderTimelineItem).join("")
     : emptyState("Aucun front enregistré.");
 
   bindFrontDeleteButtons(els.recentTimeline);
@@ -634,8 +663,9 @@ function renderAlters() {
 }
 
 function renderFronts() {
-  els.frontList.innerHTML = sortedFronts().length
-    ? sortedFronts().map(renderTimelineItem).join("")
+  const fronts = sortedFronts();
+  els.frontList.innerHTML = fronts.length
+    ? fronts.map(renderTimelineItem).join("")
     : emptyState("Aucun front enregistré.");
 
   bindFrontDeleteButtons(els.frontList);
@@ -645,6 +675,14 @@ function renderNotes() {
   els.noteList.innerHTML = state.notes.length
     ? state.notes.map(renderNoteCard).join("")
     : emptyState("Aucune note pour le moment.");
+
+  els.noteList.querySelectorAll("[data-edit-note]").forEach((button) => {
+    button.addEventListener("click", () => editNote(button.dataset.editNote));
+  });
+
+  els.noteList.querySelectorAll("[data-delete-note]").forEach((button) => {
+    button.addEventListener("click", () => deleteNote(button.dataset.deleteNote));
+  });
 }
 
 function renderAlterCard(alter) {
@@ -709,6 +747,10 @@ function renderNoteCard(note) {
         <span class="tag">${formatDate(note.createdAt)}</span>
       </div>
       <p>${escapeHtml(note.body)}</p>
+      <div class="card-actions">
+        <button class="small-button" data-edit-note="${escapeAttr(note.id)}" type="button">Modifier</button>
+        <button class="small-button danger-button" data-delete-note="${escapeAttr(note.id)}" type="button">Supprimer</button>
+      </div>
     </article>
   `;
 }
@@ -774,6 +816,39 @@ function resetAlterForm() {
   els.alterForm.reset();
   els.alterId.value = "";
   els.alterColor.value = "#3f7d68";
+}
+
+function editNote(id) {
+  const note = state.notes.find((item) => item.id === id);
+  if (!note) return;
+
+  els.noteId.value = note.id;
+  els.noteTitle.value = note.title;
+  els.noteMood.value = note.mood;
+  els.noteBody.value = note.body;
+  els.noteTitle.focus();
+}
+
+async function deleteNote(id) {
+  const note = state.notes.find((item) => item.id === id);
+  if (!note) return;
+
+  const confirmed = confirm(`Supprimer la note "${note.title}" ?`);
+  if (!confirmed) return;
+
+  const { error } = await db.from("notes").delete().eq("id", id);
+  if (error) {
+    alert(`Erreur Supabase : ${error.message}`);
+    return;
+  }
+
+  if (els.noteId.value === id) resetNoteForm();
+  await refreshAndRender();
+}
+
+function resetNoteForm() {
+  els.noteForm.reset();
+  els.noteId.value = "";
 }
 
 async function uploadAlterPhoto(alterId, previousPath) {
