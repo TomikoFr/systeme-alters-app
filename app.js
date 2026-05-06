@@ -32,6 +32,7 @@ const els = {
   alterId: document.querySelector("#alter-id"),
   alterName: document.querySelector("#alter-name"),
   alterAge: document.querySelector("#alter-age"),
+  alterPronouns: document.querySelector("#alter-pronouns"),
   alterRole: document.querySelector("#alter-role"),
   alterColor: document.querySelector("#alter-color"),
   alterPhoto: document.querySelector("#alter-photo"),
@@ -303,6 +304,7 @@ async function seedIfEmpty() {
       {
         name: "Exemple - Hôte",
         age: "adulte",
+        pronouns: "",
         role: "organisation du quotidien",
         color: "#3f7d68",
         notes: "Remplace ces exemples par les membres de ton système.",
@@ -310,6 +312,7 @@ async function seedIfEmpty() {
       {
         name: "Exemple - Protecteur",
         age: "",
+        pronouns: "",
         role: "sécurité et limites",
         color: "#9f4f39",
         notes: "Note ici les besoins, limites, préférences et déclencheurs utiles.",
@@ -348,6 +351,7 @@ async function saveAlter() {
     id,
     name: els.alterName.value.trim(),
     age: els.alterAge.value.trim(),
+    pronouns: els.alterPronouns.value.trim(),
     role: els.alterRole.value.trim(),
     color: els.alterColor.value,
     notes: els.alterNotes.value.trim(),
@@ -432,7 +436,8 @@ async function importSimplyPluralMembers(members) {
     const existing = existingByName.get(normalizeName(name));
     const color = normalizeColor(readFirstString(member, ["color", "colour", "colorHex"])) || existing?.color || "#3f7d68";
     const notes = readFirstString(member, ["desc", "description", "notes", "info"]) || existing?.notes || "";
-    const role = readFirstString(member, ["role", "proxyName", "pronouns"]) || existing?.role || "";
+    const role = readFirstString(member, ["role", "proxyName"]) || existing?.role || "";
+    const pronouns = readFirstString(member, ["pronouns", "pronoms"]) || existing?.pronouns || "";
     const age = readFirstString(member, ["age", "birthday"]) || existing?.age || "";
     const id = existing?.id || makeId();
 
@@ -440,6 +445,7 @@ async function importSimplyPluralMembers(members) {
       id,
       name,
       age,
+      pronouns,
       role,
       color,
       notes,
@@ -589,6 +595,7 @@ function renderAlterCard(alter) {
       </header>
       <div class="tag-row">
         ${alter.age ? `<span class="tag">${escapeHtml(alter.age)}</span>` : ""}
+        ${alter.pronouns ? `<span class="tag">${escapeHtml(alter.pronouns)}</span>` : ""}
         ${alter.role ? `<span class="tag">${escapeHtml(alter.role)}</span>` : ""}
       </div>
       <p>${escapeHtml(alter.notes || "Aucune note.")}</p>
@@ -648,6 +655,7 @@ function editAlter(id) {
   els.alterId.value = alter.id;
   els.alterName.value = alter.name;
   els.alterAge.value = alter.age;
+  els.alterPronouns.value = alter.pronouns;
   els.alterRole.value = alter.role;
   els.alterColor.value = alter.color;
   els.alterPhoto.value = "";
@@ -841,6 +849,7 @@ async function mapAlterFromDb(row) {
     id: row.id,
     name: row.name,
     age: row.age || "",
+    pronouns: row.pronouns || "",
     role: row.role || "",
     color: row.color || "#3f7d68",
     notes: row.notes || "",

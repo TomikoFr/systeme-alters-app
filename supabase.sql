@@ -3,6 +3,7 @@ create table if not exists public.alters (
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name text not null,
   age text default '',
+  pronouns text default '',
   role text default '',
   color text not null default '#3f7d68',
   notes text default '',
@@ -12,6 +13,9 @@ create table if not exists public.alters (
 
 alter table public.alters
 add column if not exists photo_path text default '';
+
+alter table public.alters
+add column if not exists pronouns text default '';
 
 create table if not exists public.fronts (
   id uuid primary key default gen_random_uuid(),

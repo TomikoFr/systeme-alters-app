@@ -108,6 +108,12 @@ button {
   margin-top: 16px;
 }
 
+.sidebar-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+}
+
 .link-code {
   padding: 10px;
   border: 1px dashed var(--line);
@@ -196,6 +202,7 @@ h3 {
 }
 
 .privacy-note {
+  display: none;
   margin-top: auto;
   padding: 16px;
   border: 1px solid var(--line);
@@ -552,29 +559,14 @@ textarea {
     white-space: nowrap;
   }
 
-  .privacy-note p {
-    display: none;
-  }
-
-  .privacy-note {
-    margin-top: 0;
-    padding: 10px;
-    box-shadow: none;
-  }
-
-  .privacy-note strong {
-    display: none;
-  }
-
-  .account-box {
+  .sidebar-actions {
     grid-template-columns: 1fr 1fr;
     align-items: stretch;
     gap: 8px;
     margin-top: 0;
   }
 
-  .account-box > span:first-child,
-  .link-code {
+  .sidebar-actions > span:first-child {
     grid-column: 1 / -1;
   }
 

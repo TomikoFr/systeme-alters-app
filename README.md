@@ -29,7 +29,7 @@ Dans Supabase, verifie aussi `Authentication` > `URL Configuration` :
 - Donnees synchronisees entre appareils apres connexion.
 - Import JSON Simply Plural pour recuperer les membres et fronts reconnus.
 - Tableau de bord avec front actuel, nombre d'alters et derniere note.
-- Repertoire des alters avec nom, age, role, couleur, photo et notes.
+- Repertoire des alters avec nom, age, pronoms, role, couleur, photo et notes.
 - Suivi des fronts avec date, intensite de presence et contexte.
 - Journal partage avec humeur et notes.
 

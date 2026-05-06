@@ -71,16 +71,19 @@
           <button class="nav-tab" data-view="journal" type="button">Journal</button>
         </nav>
 
+        <div class="sidebar-actions">
+          <span id="active-account">Compte en ligne</span>
+          <button class="small-button" id="logout-button" type="button">Déconnexion</button>
+        </div>
+
         <section class="privacy-note">
           <strong>Confidentialité</strong>
           <p>Les données sont stockées dans Supabase avec une séparation par compte. Ce n'est pas un outil médical.</p>
           <div class="account-box">
-            <span id="active-account">Compte en ligne</span>
             <span class="link-code" id="discord-link-status">Discord : vérification...</span>
             <button class="small-button" id="discord-link-button" type="button">Lier Discord</button>
             <button class="small-button" id="discord-link-refresh" type="button">Vérifier Discord</button>
             <span class="link-code hidden" id="discord-link-code"></span>
-            <button class="small-button" id="logout-button" type="button">Déconnexion</button>
           </div>
         </section>
       </aside>
@@ -154,6 +157,10 @@
             <label>
               Age ou tranche d'âge
               <input id="alter-age" autocomplete="off" />
+            </label>
+            <label>
+              Pronoms
+              <input id="alter-pronouns" autocomplete="off" placeholder="iel/elle, il/lui..." />
             </label>
             <label>
               Rôle
