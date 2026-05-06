@@ -2,29 +2,9 @@
 
 App web en francais pour suivre les alters d'un systeme TDI, les fronts/co-fronts et un journal partage.
 
-## Lancer l'app
-
-Ouvre `index.html` dans ton navigateur, ou utilise la version GitHub Pages.
-
-## Configuration Supabase
-
-Avant d'utiliser l'app en ligne, execute ton script SQL local dans Supabase. Le fichier `supabase.sql` est volontairement garde hors de GitHub :
-
-1. Ouvre ton projet Supabase.
-2. Va dans `SQL Editor`.
-3. Colle le contenu de `supabase.sql`.
-4. Clique sur `Run`.
-
-Le script cree les tables `alters`, `fronts`, `front_entries` et `notes`, active Row Level Security, puis ajoute les regles pour que chaque compte voie uniquement ses propres donnees.
-
-Dans Supabase, verifie aussi `Authentication` > `URL Configuration` :
-
-- `Site URL` : l'URL GitHub Pages de l'app.
-- `Redirect URLs` : ajoute aussi cette meme URL.
 
 ## Fonctions
 
-- Connexion et creation de compte avec Supabase Auth.
 - Liaison Discord par code temporaire.
 - Donnees synchronisees entre appareils apres connexion.
 - Import JSON Simply Plural pour recuperer les membres et fronts reconnus.
@@ -33,23 +13,6 @@ Dans Supabase, verifie aussi `Authentication` > `URL Configuration` :
 - Suivi des fronts/co-fronts avec plusieurs alters, intensite de presence et contexte.
 - Journal partage avec humeur et notes.
 
-## Lier Discord
-
-Depuis le site, clique sur `Lier Discord` pour generer un code temporaire. Dans Discord, utilise ensuite :
-
-```text
-/lier code:<code>
-```
-
-Reviens ensuite sur le site et clique sur `Verifier Discord` pour mettre le statut a jour.
-
-Le code expire apres 10 minutes.
-
-## Securite
-
-La cle Supabase utilisee dans `app.js` est une cle publishable, prevue pour etre visible dans le navigateur. Les donnees et les photos restent protegees par les policies RLS dans `supabase.sql`.
-
-Ne publie jamais la cle `secret` ou `service_role`.
 
 ## Note importante
 
