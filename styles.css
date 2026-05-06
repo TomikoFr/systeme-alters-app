@@ -185,6 +185,9 @@ h3 {
 }
 
 .nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   padding: 12px 14px;
   border: 1px solid transparent;
@@ -192,6 +195,12 @@ h3 {
   color: var(--muted);
   background: transparent;
   text-align: left;
+}
+
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
 }
 
 .nav-tab.active,
@@ -595,19 +604,55 @@ textarea {
   }
 
   .nav-tabs {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    scrollbar-width: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin: 0;
+    padding: 6px 6px max(8px, env(safe-area-inset-bottom));
+    background: rgba(255, 253, 247, 0.97);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 18px rgba(23, 33, 28, 0.08);
+    backdrop-filter: blur(14px);
   }
 
   .nav-tab {
-    flex: 0 0 auto;
-    min-width: 86px;
-    padding: 10px 12px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    width: auto;
+    padding: 6px 4px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
     text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
     white-space: nowrap;
+  }
+
+  .nav-tab:hover {
+    background: transparent;
+    border: 0;
+    color: var(--ink);
+  }
+
+  .nav-tab.active {
+    color: var(--moss);
+    background: rgba(63, 125, 104, 0.12);
+    border: 0;
+  }
+
+  .nav-icon {
+    width: 22px;
+    height: 22px;
   }
 
   .sidebar-actions {
@@ -621,8 +666,35 @@ textarea {
     grid-column: 1 / -1;
   }
 
+  .privacy-note {
+    margin-top: 0;
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .privacy-note > strong,
+  .privacy-note > p {
+    display: none;
+  }
+
+  .account-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 0;
+  }
+
+  .account-box > #discord-link-status,
+  .account-box > #discord-link-code {
+    grid-column: 1 / -1;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+
   .workspace {
-    padding: 18px 12px 28px;
+    padding: 18px 12px calc(86px + env(safe-area-inset-bottom));
   }
 
   .view-header {
@@ -675,10 +747,6 @@ textarea {
   .view-header {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .nav-tabs {
-    margin-inline: -2px;
   }
 
   .form-actions {
