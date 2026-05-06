@@ -321,6 +321,58 @@ h3 {
   grid-column: 1 / -1;
 }
 
+.front-picker {
+  display: grid;
+  gap: 12px;
+}
+
+.front-picker p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.front-entry-list {
+  display: grid;
+  gap: 10px;
+}
+
+.front-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px);
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.front-entry label:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.front-entry input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.front-entry strong {
+  min-width: 0;
+}
+
+.front-entry input[type="range"] {
+  padding-inline: 0;
+}
+
+.mini-swatch {
+  width: 16px;
+  height: 16px;
+}
+
 label {
   display: grid;
   gap: 7px;
@@ -662,6 +714,14 @@ textarea {
 
   .card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .front-entry {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .front-entry label {
+    grid-column: 1 / -1;
   }
 
   .alter-card header {

@@ -8,14 +8,14 @@ Ouvre `index.html` dans ton navigateur, ou utilise la version GitHub Pages.
 
 ## Configuration Supabase
 
-Avant d'utiliser l'app en ligne, execute le fichier `supabase.sql` dans Supabase :
+Avant d'utiliser l'app en ligne, execute ton script SQL local dans Supabase. Le fichier `supabase.sql` est volontairement garde hors de GitHub :
 
 1. Ouvre ton projet Supabase.
 2. Va dans `SQL Editor`.
 3. Colle le contenu de `supabase.sql`.
 4. Clique sur `Run`.
 
-Le script cree les tables `alters`, `fronts` et `notes`, active Row Level Security, puis ajoute les regles pour que chaque compte voie uniquement ses propres donnees.
+Le script cree les tables `alters`, `fronts`, `front_entries` et `notes`, active Row Level Security, puis ajoute les regles pour que chaque compte voie uniquement ses propres donnees.
 
 Dans Supabase, verifie aussi `Authentication` > `URL Configuration` :
 
@@ -30,7 +30,7 @@ Dans Supabase, verifie aussi `Authentication` > `URL Configuration` :
 - Import JSON Simply Plural pour recuperer les membres et fronts reconnus.
 - Tableau de bord avec front actuel, nombre d'alters et derniere note.
 - Repertoire des alters avec nom, age, pronoms, role, couleur, photo et notes.
-- Suivi des fronts avec date, intensite de presence et contexte.
+- Suivi des fronts/co-fronts avec plusieurs alters, intensite de presence et contexte.
 - Journal partage avec humeur et notes.
 
 ## Lier Discord

@@ -197,17 +197,16 @@
 
           <form class="editor-form" id="front-form">
             <label>
-              Alter au front
-              <select id="front-alter" required></select>
-            </label>
-            <label>
               Moment
               <input id="front-time" type="datetime-local" required />
             </label>
-            <label>
-              Intensité de présence
-              <input id="front-presence" type="range" min="1" max="5" value="3" />
-            </label>
+            <div class="wide front-picker">
+              <div>
+                <h3>Alters au front</h3>
+                <p>Sélectionne un ou plusieurs alters et leur intensité de présence.</p>
+              </div>
+              <div class="front-entry-list" id="front-entry-list"></div>
+            </div>
             <label class="wide">
               Contexte
               <textarea id="front-context" rows="3" placeholder="lieu, émotion, fatigue, déclencheur possible..."></textarea>

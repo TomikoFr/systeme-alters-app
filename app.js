@@ -43,9 +43,8 @@ const els = {
   spImportButton: document.querySelector("#sp-import-button"),
   spImportStatus: document.querySelector("#sp-import-status"),
   frontForm: document.querySelector("#front-form"),
-  frontAlter: document.querySelector("#front-alter"),
+  frontEntryList: document.querySelector("#front-entry-list"),
   frontTime: document.querySelector("#front-time"),
-  frontPresence: document.querySelector("#front-presence"),
   frontContext: document.querySelector("#front-context"),
   frontList: document.querySelector("#front-list"),
   noteForm: document.querySelector("#note-form"),
@@ -276,7 +275,7 @@ async function loadDiscordLinkStatus() {
 async function loadRemoteState() {
   const [altersResult, frontsResult, notesResult] = await Promise.all([
     db.from("alters").select("*").order("created_at", { ascending: false }),
-    db.from("fronts").select("*").order("time", { ascending: false }),
+    db.from("fronts").select("*, front_entries(*)").order("time", { ascending: false }),
     db.from("notes").select("*").order("created_at", { ascending: false }),
   ]);
 
@@ -325,19 +324,30 @@ async function seedIfEmpty() {
     return;
   }
 
-  await Promise.all([
+  const [{ data: latestFront, error: frontError }, noteResult] = await Promise.all([
     db.from("fronts").insert({
-      alter_id: alters[0].id,
       time: now.toISOString(),
-      presence: 3,
       context: "Premier front d'exemple.",
-    }),
+    }).select("id").single(),
     db.from("notes").insert({
       title: "Bienvenue",
       mood: "stable",
       body: "Ce journal est synchronisé avec Supabase. Tu peux le retrouver après connexion.",
     }),
   ]);
+
+  if (frontError || noteResult.error) {
+    showAuthError(`Erreur Supabase : ${(frontError || noteResult.error).message}`);
+    return;
+  }
+
+  if (latestFront && alters[0]) {
+    await db.from("front_entries").insert({
+      front_id: latestFront.id,
+      alter_id: alters[0].id,
+      presence: 3,
+    });
+  }
 
   await loadRemoteState();
 }
@@ -372,26 +382,38 @@ async function saveAlter() {
 }
 
 async function saveFront() {
-  if (!els.frontAlter.value) {
-    alert("Ajoute d'abord un alter avant d'ajouter un front.");
+  const entries = readSelectedFrontEntries();
+
+  if (!entries.length) {
+    alert("Sélectionne au moins un alter au front.");
     return;
   }
 
-  const { error } = await db.from("fronts").insert({
-    alter_id: els.frontAlter.value,
+  const { data: front, error } = await db.from("fronts").insert({
     time: new Date(els.frontTime.value).toISOString(),
-    presence: Number(els.frontPresence.value),
     context: els.frontContext.value.trim(),
-  });
+  }).select("id").single();
 
   if (error) {
     alert(`Erreur Supabase : ${error.message}`);
     return;
   }
 
+  const { error: entriesError } = await db.from("front_entries").insert(
+    entries.map((entry) => ({
+      front_id: front.id,
+      alter_id: entry.alterId,
+      presence: entry.presence,
+    }))
+  );
+
+  if (entriesError) {
+    alert(`Erreur Supabase : ${entriesError.message}`);
+    return;
+  }
+
   els.frontForm.reset();
   els.frontTime.value = toDateTimeInputValue(new Date());
-  els.frontPresence.value = 3;
   await refreshAndRender();
 }
 
@@ -478,17 +500,29 @@ async function importSimplyPluralFronts(frontHistory, importedAlters) {
     if (!time) continue;
 
     rows.push({
-      alter_id: alter.id,
       time: time.toISOString(),
-      presence: 3,
       context: readFirstString(entry, ["comment", "note", "notes", "customStatus", "status"]) || "Import Simply Plural",
+      entries: [{ alterId: alter.id, presence: 3 }],
     });
   }
 
   if (!rows.length) return 0;
 
-  const { error } = await db.from("fronts").insert(rows);
+  const { data: fronts, error } = await db.from("fronts").insert(
+    rows.map((row) => ({ time: row.time, context: row.context }))
+  ).select("id");
   if (error) throw error;
+
+  const entryRows = rows.flatMap((row, index) =>
+    row.entries.map((entry) => ({
+      front_id: fronts[index].id,
+      alter_id: entry.alterId,
+      presence: entry.presence,
+    }))
+  );
+
+  const { error: entriesError } = await db.from("front_entries").insert(entryRows);
+  if (entriesError) throw entriesError;
 
   return rows.length;
 }
@@ -521,17 +555,44 @@ function setView(id) {
 
 function render() {
   els.frontTime.value ||= toDateTimeInputValue(new Date());
-  renderAlterOptions();
+  renderFrontEntryOptions();
   renderDashboard();
   renderAlters();
   renderFronts();
   renderNotes();
 }
 
-function renderAlterOptions() {
-  els.frontAlter.innerHTML = state.alters.length
-    ? state.alters.map((alter) => `<option value="${escapeAttr(alter.id)}">${escapeHtml(alter.name)}</option>`).join("")
-    : '<option value="">Aucun alter disponible</option>';
+function renderFrontEntryOptions() {
+  els.frontEntryList.innerHTML = state.alters.length
+    ? state.alters.map(renderFrontEntryOption).join("")
+    : emptyState("Ajoute d'abord un alter pour créer un front.");
+}
+
+function renderFrontEntryOption(alter) {
+  const id = `front-entry-${alter.id}`;
+
+  return `
+    <div class="front-entry" data-front-entry="${escapeAttr(alter.id)}">
+      <label for="${escapeAttr(id)}">
+        <input id="${escapeAttr(id)}" type="checkbox" data-front-entry-check />
+        <span class="swatch mini-swatch" style="background:${escapeAttr(alter.color)}"></span>
+        <strong>${escapeHtml(alter.name)}</strong>
+      </label>
+      <label>
+        Présence
+        <input type="range" min="1" max="5" value="3" data-front-entry-presence />
+      </label>
+    </div>
+  `;
+}
+
+function readSelectedFrontEntries() {
+  return [...els.frontEntryList.querySelectorAll("[data-front-entry]")]
+    .filter((entryElement) => entryElement.querySelector("[data-front-entry-check]")?.checked)
+    .map((entryElement) => ({
+      alterId: entryElement.dataset.frontEntry,
+      presence: Number(entryElement.querySelector("[data-front-entry-presence]")?.value || 3),
+    }));
 }
 
 function renderDashboard() {
@@ -539,9 +600,9 @@ function renderDashboard() {
   const latestNote = state.notes[0];
 
   els.alterCount.textContent = state.alters.length;
-  els.currentFront.textContent = latestFront ? getAlterName(latestFront.alterId) : "Non renseigné";
+  els.currentFront.textContent = latestFront ? getFrontTitle(latestFront) : "Non renseigné";
   els.currentFrontDetail.textContent = latestFront
-    ? `${formatDate(latestFront.time)} · présence ${latestFront.presence}/5`
+    ? `${formatDate(latestFront.time)} · ${latestFront.entries.length} alter(s)`
     : "Ajoute un front pour voir qui est présent.";
 
   els.lastNoteTitle.textContent = latestNote?.title || "Aucune";
@@ -620,13 +681,17 @@ function renderCompactAlter(alter) {
 }
 
 function renderTimelineItem(front) {
-  const alter = state.alters.find((item) => item.id === front.alterId);
+  const firstEntry = front.entries[0];
+  const alter = state.alters.find((item) => item.id === firstEntry?.alterId);
   const color = alter?.color || "#3f7d68";
 
   return `
     <article class="timeline-item" style="border-left-color:${escapeAttr(color)}">
-      <strong>${escapeHtml(getAlterName(front.alterId))}</strong>
-      <span>${formatDate(front.time)} · présence ${front.presence}/5</span>
+      <strong>${escapeHtml(getFrontTitle(front))}</strong>
+      <span>${formatDate(front.time)}</span>
+      <div class="tag-row">
+        ${front.entries.map((entry) => `<span class="tag">${escapeHtml(getAlterName(entry.alterId))} · ${entry.presence}/5</span>`).join("")}
+      </div>
       <p>${escapeHtml(front.context || "Pas de contexte ajouté.")}</p>
       <div class="timeline-actions">
         <button class="small-button danger-button" data-delete-front="${escapeAttr(front.id)}" type="button">Supprimer</button>
@@ -693,7 +758,7 @@ async function deleteFront(id) {
   const front = state.fronts.find((item) => item.id === id);
   if (!front) return;
 
-  const confirmed = confirm(`Supprimer ce front de ${getAlterName(front.alterId)} ?`);
+  const confirmed = confirm(`Supprimer ce front de ${getFrontTitle(front)} ?`);
   if (!confirmed) return;
 
   const { error } = await db.from("fronts").delete().eq("id", id);
@@ -750,6 +815,12 @@ function sortedFronts() {
 
 function getAlterName(id) {
   return state.alters.find((alter) => alter.id === id)?.name || "Alter supprimé";
+}
+
+function getFrontTitle(front) {
+  if (!front?.entries?.length) return "Front sans alter";
+
+  return front.entries.map((entry) => getAlterName(entry.alterId)).join(", ");
 }
 
 function toDateTimeInputValue(date) {
@@ -896,13 +967,28 @@ function makeLinkCode() {
 }
 
 function mapFrontFromDb(row) {
+  const entries = (row.front_entries || []).map((entry) => ({
+    id: entry.id,
+    alterId: entry.alter_id,
+    presence: entry.presence || 3,
+    createdAt: entry.created_at,
+  }));
+
+  if (!entries.length && row.alter_id) {
+    entries.push({
+      id: `${row.id}-legacy`,
+      alterId: row.alter_id,
+      presence: row.presence || 3,
+      createdAt: row.created_at,
+    });
+  }
+
   return {
     id: row.id,
-    alterId: row.alter_id,
     time: row.time,
-    presence: row.presence,
     context: row.context || "",
     createdAt: row.created_at,
+    entries,
   };
 }
 
