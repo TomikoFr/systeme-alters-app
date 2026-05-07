@@ -21,6 +21,8 @@ const els = {
   registerPassword: document.querySelector("#register-password"),
   registerConfirm: document.querySelector("#register-confirm"),
   activeAccount: document.querySelector("#active-account"),
+  mobileMenuToggle: document.querySelector("#mobile-menu-toggle"),
+  mobileMenuPanel: document.querySelector("#mobile-menu-panel"),
   discordLinkButton: document.querySelector("#discord-link-button"),
   discordLinkRefresh: document.querySelector("#discord-link-refresh"),
   discordLinkStatus: document.querySelector("#discord-link-status"),
@@ -90,6 +92,8 @@ function wireEvents() {
     tab.addEventListener("click", () => setAuthView(tab.dataset.authView));
   });
 
+  els.mobileMenuToggle.addEventListener("click", toggleMobileMenu);
+
   els.loginForm.addEventListener("submit", (event) => {
     event.preventDefault();
     runBusy(els.loginForm.querySelector("[type=submit]"), "Connexion…", loginAccount);
@@ -112,7 +116,10 @@ function wireEvents() {
   });
 
   els.tabs.forEach((tab) => {
-    tab.addEventListener("click", () => setView(tab.dataset.view));
+    tab.addEventListener("click", () => {
+      setView(tab.dataset.view);
+      closeMobileMenu();
+    });
   });
 
   els.alterForm.addEventListener("submit", (event) => {
@@ -618,6 +625,18 @@ async function refreshAndRender() {
 function setView(id) {
   els.tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === id));
   els.views.forEach((view) => view.classList.toggle("active", view.id === id));
+}
+
+function toggleMobileMenu() {
+  const isOpen = els.mobileMenuPanel.classList.toggle("open");
+  els.mobileMenuToggle.setAttribute("aria-expanded", String(isOpen));
+  els.mobileMenuToggle.textContent = isOpen ? "Fermer" : "Menu";
+}
+
+function closeMobileMenu() {
+  els.mobileMenuPanel.classList.remove("open");
+  els.mobileMenuToggle.setAttribute("aria-expanded", "false");
+  els.mobileMenuToggle.textContent = "Menu";
 }
 
 function render() {

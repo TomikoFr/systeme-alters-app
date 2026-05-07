@@ -159,6 +159,17 @@ button {
   backdrop-filter: blur(18px);
 }
 
+.mobile-menu-toggle {
+  display: none;
+}
+
+.mobile-menu-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-height: 0;
+}
+
 .brand {
   display: flex;
   gap: 14px;
@@ -599,14 +610,41 @@ textarea {
   .sidebar {
     position: sticky;
     top: 0;
-    z-index: 2;
+    z-index: 30;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
     padding: 12px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
     background: rgba(255, 253, 247, 0.94);
+  }
+
+  .mobile-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: white;
+    background: var(--moss);
+    font-weight: 800;
+  }
+
+  .mobile-menu-panel {
+    grid-column: 1 / -1;
+    display: none;
+    gap: 12px;
+    max-height: calc(100vh - 82px);
+    overflow-y: auto;
+    padding-top: 4px;
+  }
+
+  .mobile-menu-panel.open {
+    display: grid;
   }
 
   .brand {
@@ -623,20 +661,15 @@ textarea {
   }
 
   .nav-tabs {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 20;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
     margin: 0;
-    padding: 6px 6px max(8px, env(safe-area-inset-bottom));
-    background: rgba(255, 253, 247, 0.97);
-    border-top: 1px solid var(--line);
-    box-shadow: 0 -4px 18px rgba(23, 33, 28, 0.08);
-    backdrop-filter: blur(14px);
+    padding: 0;
+    background: transparent;
+    border-top: 0;
+    box-shadow: none;
+    backdrop-filter: none;
   }
 
   .nav-tab {
@@ -646,8 +679,8 @@ textarea {
     gap: 3px;
     min-width: 0;
     width: auto;
-    padding: 6px 4px;
-    border: 0;
+    padding: 10px 8px;
+    border: 1px solid var(--line);
     border-radius: 8px;
     background: transparent;
     color: var(--muted);
@@ -658,15 +691,15 @@ textarea {
   }
 
   .nav-tab:hover {
-    background: transparent;
-    border: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
     color: var(--ink);
   }
 
   .nav-tab.active {
     color: var(--moss);
     background: rgba(63, 125, 104, 0.12);
-    border: 0;
+    border: 1px solid rgba(63, 125, 104, 0.28);
   }
 
   .nav-icon {
@@ -718,7 +751,7 @@ textarea {
   }
 
   .workspace {
-    padding: 18px 12px calc(86px + env(safe-area-inset-bottom));
+    padding: 18px 12px 24px;
   }
 
   .view-header {
