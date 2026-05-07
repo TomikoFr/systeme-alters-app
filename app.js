@@ -5,7 +5,7 @@ const PHOTO_BUCKET = "alter-photos";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 let currentUser = null;
-let state = { alters: [], fronts: [], notes: [] };
+let state = { alters: [], fronts: [], notes: [], proxySettings: null };
 
 const els = {
   authScreen: document.querySelector("#auth-screen"),
@@ -25,6 +25,10 @@ const els = {
   discordLinkRefresh: document.querySelector("#discord-link-refresh"),
   discordLinkStatus: document.querySelector("#discord-link-status"),
   discordLinkCode: document.querySelector("#discord-link-code"),
+  autoproxyEnabled: document.querySelector("#autoproxy-enabled"),
+  autoproxyAlter: document.querySelector("#autoproxy-alter"),
+  autoproxySave: document.querySelector("#autoproxy-save"),
+  autoproxyStatus: document.querySelector("#autoproxy-status"),
   logoutButton: document.querySelector("#logout-button"),
   tabs: document.querySelectorAll(".nav-tab"),
   views: document.querySelectorAll(".view"),
@@ -102,6 +106,9 @@ function wireEvents() {
   });
   els.discordLinkRefresh.addEventListener("click", () => {
     runBusy(els.discordLinkRefresh, "Vérification…", loadDiscordLinkStatus);
+  });
+  els.autoproxySave.addEventListener("click", () => {
+    runBusy(els.autoproxySave, "Enregistrement…", saveAutoproxySettings);
   });
 
   els.tabs.forEach((tab) => {
@@ -231,7 +238,7 @@ async function startSession(user) {
 async function logoutAccount() {
   await db.auth.signOut();
   currentUser = null;
-  state = { alters: [], fronts: [], notes: [] };
+  state = { alters: [], fronts: [], notes: [], proxySettings: null };
   els.discordLinkCode.classList.add("hidden");
   els.discordLinkCode.textContent = "";
   els.discordLinkStatus.textContent = "Discord : non connecté";
@@ -296,13 +303,15 @@ async function loadDiscordLinkStatus() {
 }
 
 async function loadRemoteState() {
-  const [altersResult, frontsResult, notesResult] = await Promise.all([
+  const [altersResult, frontsResult, notesResult, proxyResult] = await Promise.all([
     db.from("alters").select("*").order("created_at", { ascending: false }),
     db.from("fronts").select("*, front_entries(*)").order("time", { ascending: false }),
     db.from("notes").select("*").order("created_at", { ascending: false }),
+    db.from("discord_proxy_settings").select("*").maybeSingle(),
   ]);
 
-  const error = altersResult.error || frontsResult.error || notesResult.error;
+  const proxyError = isMissingTableError(proxyResult.error) ? null : proxyResult.error;
+  const error = altersResult.error || frontsResult.error || notesResult.error || proxyError;
   if (error) {
     showAuthError(`Erreur Supabase : ${error.message}. As-tu exécuté supabase.sql ?`);
     return;
@@ -312,6 +321,7 @@ async function loadRemoteState() {
     alters: await Promise.all(altersResult.data.map(mapAlterFromDb)),
     fronts: frontsResult.data.map(mapFrontFromDb),
     notes: notesResult.data.map(mapNoteFromDb),
+    proxySettings: proxyResult.data && !proxyResult.error ? mapProxySettingsFromDb(proxyResult.data) : null,
   };
 }
 
@@ -437,6 +447,35 @@ async function saveFront() {
 
   els.frontForm.reset();
   els.frontTime.value = toDateTimeInputValue(new Date());
+  await refreshAndRender();
+}
+
+async function saveAutoproxySettings() {
+  if (!currentUser) return;
+
+  const alterId = els.autoproxyAlter.value;
+  const enabled = els.autoproxyEnabled.checked;
+
+  if (enabled && !alterId) {
+    alert("Choisis un alter avant d'activer l'autoproxy.");
+    return;
+  }
+
+  const { error } = await db.from("discord_proxy_settings").upsert(
+    {
+      user_id: currentUser.id,
+      enabled,
+      alter_id: alterId || null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (error) {
+    alert(`Erreur Supabase : ${error.message}. As-tu réexécuté supabase.sql ?`);
+    return;
+  }
+
   await refreshAndRender();
 }
 
@@ -583,11 +622,28 @@ function setView(id) {
 
 function render() {
   els.frontTime.value ||= toDateTimeInputValue(new Date());
+  renderAutoproxyOptions();
   renderFrontEntryOptions();
   renderDashboard();
   renderAlters();
   renderFronts();
   renderNotes();
+}
+
+function renderAutoproxyOptions() {
+  const options = state.alters
+    .map((alter) => `<option value="${escapeAttr(alter.id)}">${escapeHtml(alter.name)}</option>`)
+    .join("");
+
+  els.autoproxyAlter.innerHTML = options || '<option value="">Aucun alter disponible</option>';
+  els.autoproxyEnabled.checked = Boolean(state.proxySettings?.enabled);
+  els.autoproxyAlter.value = state.proxySettings?.alterId || state.alters[0]?.id || "";
+
+  if (state.proxySettings?.enabled && state.proxySettings?.alterId) {
+    els.autoproxyStatus.textContent = `Autoproxy : actif avec ${getAlterName(state.proxySettings.alterId)}`;
+  } else {
+    els.autoproxyStatus.textContent = "Autoproxy : désactivé";
+  }
 }
 
 function renderFrontEntryOptions() {
@@ -914,6 +970,12 @@ function normalizeEmail(value) {
   return value.trim().toLowerCase();
 }
 
+function isMissingTableError(error) {
+  if (!error) return false;
+  const message = `${error.code || ""} ${error.message || ""}`.toLowerCase();
+  return message.includes("discord_proxy_settings") && (message.includes("does not exist") || message.includes("pgrst"));
+}
+
 function findSimplyPluralMembers(data) {
   return findFirstArray(data, ["members", "memberships", "alters", "profiles"]);
 }
@@ -1074,6 +1136,14 @@ function mapNoteFromDb(row) {
     mood: row.mood,
     body: row.body,
     createdAt: row.created_at,
+  };
+}
+
+function mapProxySettingsFromDb(row) {
+  return {
+    enabled: Boolean(row.enabled),
+    alterId: row.alter_id || "",
+    updatedAt: row.updated_at,
   };
 }
 

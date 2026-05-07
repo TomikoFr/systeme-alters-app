@@ -108,6 +108,25 @@ button {
   margin-top: 16px;
 }
 
+.autoproxy-box {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.switch-row {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.switch-row input {
+  width: 18px;
+  height: 18px;
+}
+
 .sidebar-actions {
   display: grid;
   gap: 10px;
@@ -691,6 +710,11 @@ textarea {
     grid-column: 1 / -1;
     padding: 6px 10px;
     font-size: 0.78rem;
+  }
+
+  .autoproxy-box {
+    grid-column: 1 / -1;
+    padding-top: 8px;
   }
 
   .workspace {

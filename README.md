@@ -6,6 +6,7 @@ App web en francais pour suivre les alters d'un systeme TDI, les fronts/co-front
 ## Fonctions
 
 - Liaison Discord par code temporaire.
+- Autoproxy Discord configurable depuis le site.
 - Donnees synchronisees entre appareils apres connexion.
 - Import JSON Simply Plural pour recuperer les membres et fronts reconnus.
 - Tableau de bord avec front actuel, nombre d'alters et derniere note.
