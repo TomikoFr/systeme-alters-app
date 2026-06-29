@@ -136,10 +136,13 @@ function updateAuthUi() {
   $("#sync-label").textContent = currentUser ? "Synchronise" : "Mode local";
   $("#login-google-main").disabled = !isConfigured;
   $("#login-discord-main").disabled = !isConfigured;
+  $("#login-email-button").disabled = !isConfigured;
+  $("#signup-email-button").disabled = !isConfigured;
+  $("#reset-password-button").disabled = !isConfigured;
   $("#login-message").textContent = currentUser
     ? "Connexion active."
     : isConfigured
-      ? "Les donnees sont synchronisees avec Supabase apres connexion."
+      ? "Connecte-toi avec email, Google ou Discord."
       : "Supabase n'est pas encore configure.";
   updateSyncHelp(
     currentUser
@@ -172,6 +175,67 @@ async function signInWithProvider(provider) {
   });
 
   if (error) $("#login-message").textContent = `Connexion impossible : ${error.message}`;
+}
+
+function emailCredentials() {
+  return {
+    email: $("#login-email").value.trim(),
+    password: $("#login-password").value
+  };
+}
+
+async function signInWithEmailPassword() {
+  if (!supabaseClient) {
+    $("#login-message").textContent = "Supabase n'est pas encore configure.";
+    return;
+  }
+
+  const { email, password } = emailCredentials();
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  $("#login-message").textContent = error
+    ? `Connexion email impossible : ${error.message}`
+    : "Connexion reussie.";
+}
+
+async function signUpWithEmailPassword() {
+  if (!supabaseClient) {
+    $("#login-message").textContent = "Supabase n'est pas encore configure.";
+    return;
+  }
+
+  const { email, password } = emailCredentials();
+  const { error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: authRedirectUrl()
+    }
+  });
+
+  $("#login-message").textContent = error
+    ? `Creation impossible : ${error.message}`
+    : "Compte cree. Verifie tes emails si Supabase demande une confirmation.";
+}
+
+async function resetPasswordForEmail() {
+  if (!supabaseClient) {
+    $("#login-message").textContent = "Supabase n'est pas encore configure.";
+    return;
+  }
+
+  const email = $("#login-email").value.trim();
+  if (!email) {
+    $("#login-message").textContent = "Entre ton email avant de demander un reset.";
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: authRedirectUrl()
+  });
+
+  $("#login-message").textContent = error
+    ? `Reset impossible : ${error.message}`
+    : "Email de reinitialisation envoye si le compte existe.";
 }
 
 function providerLabel(provider) {
@@ -709,6 +773,19 @@ $("#login-google-main").addEventListener("click", async () => {
 
 $("#login-discord-main").addEventListener("click", async () => {
   await signInWithProvider("discord");
+});
+
+$("#email-login-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await signInWithEmailPassword();
+});
+
+$("#signup-email-button").addEventListener("click", async () => {
+  await signUpWithEmailPassword();
+});
+
+$("#reset-password-button").addEventListener("click", async () => {
+  await resetPasswordForEmail();
 });
 
 $("#logout").addEventListener("click", async () => {

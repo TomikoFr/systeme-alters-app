@@ -96,6 +96,50 @@ body {
   line-height: 1.5;
 }
 
+.email-login-form {
+  display: grid;
+  gap: 12px;
+}
+
+.email-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.link-button {
+  width: fit-content;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.link-button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
+
 .google-button,
 .discord-button {
   min-height: 52px;
@@ -729,7 +773,8 @@ menu {
   }
 
   .toolbar,
-  .form-row {
+  .form-row,
+  .email-actions {
     grid-template-columns: 1fr;
     display: grid;
   }

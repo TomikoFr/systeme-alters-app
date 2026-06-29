@@ -24,6 +24,20 @@
         </div>
         <div class="login-card">
           <p class="eyebrow">Connexion</p>
+          <form class="email-login-form" id="email-login-form">
+            <label for="login-email">Email
+              <input id="login-email" type="email" autocomplete="email" required placeholder="toi@example.com">
+            </label>
+            <label for="login-password">Mot de passe
+              <input id="login-password" type="password" autocomplete="current-password" required minlength="6" placeholder="Minimum 6 caracteres">
+            </label>
+            <div class="email-actions">
+              <button class="primary-button" id="login-email-button" type="submit">Se connecter</button>
+              <button class="ghost-button" id="signup-email-button" type="button">Creer un compte</button>
+            </div>
+            <button class="link-button" id="reset-password-button" type="button">Mot de passe oublie</button>
+          </form>
+          <div class="login-divider"><span>ou</span></div>
           <button class="google-button" id="login-google-main" type="button">
             <span aria-hidden="true">G</span>
             Continuer avec Google
