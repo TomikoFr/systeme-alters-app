@@ -131,6 +131,32 @@ p {
   gap: 10px;
 }
 
+.auth-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(238, 244, 246, 0.72);
+}
+
+.auth-panel strong,
+.auth-panel span {
+  display: block;
+}
+
+.auth-panel span,
+.settings-copy {
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.auth-actions {
+  display: grid;
+  gap: 8px;
+}
+
 label {
   display: grid;
   gap: 6px;

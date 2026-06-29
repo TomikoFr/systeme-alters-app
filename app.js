@@ -1,4 +1,14 @@
 const STORAGE_KEY = "plural-home:v1";
+const SUPABASE_CONFIG = window.PLURAL_HOME_SUPABASE || {};
+const SUPABASE_READY = Boolean(
+  window.supabase &&
+  SUPABASE_CONFIG.url &&
+  SUPABASE_CONFIG.anonKey &&
+  !SUPABASE_CONFIG.anonKey.includes("COLLE_ICI")
+);
+const supabaseClient = SUPABASE_READY
+  ? window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey)
+  : null;
 
 const defaultData = {
   system: {
@@ -32,6 +42,9 @@ const defaultData = {
 
 let state = loadState();
 let selectedFront = new Set(state.activeFront);
+let currentUser = null;
+let syncTimer = null;
+let isLoadingRemote = false;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -57,6 +70,107 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  queueCloudSave();
+}
+
+function queueCloudSave() {
+  if (!supabaseClient || !currentUser || isLoadingRemote) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    saveCloudState().catch((error) => {
+      updateSyncHelp(`Synchro impossible : ${error.message}`);
+    });
+  }, 650);
+}
+
+async function saveCloudState() {
+  if (!supabaseClient || !currentUser) return;
+
+  const { error } = await supabaseClient
+    .from("plural_profiles")
+    .upsert({
+      user_id: currentUser.id,
+      data: state,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "user_id" });
+
+  if (error) throw error;
+  updateSyncHelp("Donnees synchronisees avec Supabase.");
+}
+
+async function loadCloudState() {
+  if (!supabaseClient || !currentUser) return;
+  isLoadingRemote = true;
+
+  const { data, error } = await supabaseClient
+    .from("plural_profiles")
+    .select("data")
+    .eq("user_id", currentUser.id)
+    .maybeSingle();
+
+  if (error) {
+    isLoadingRemote = false;
+    throw error;
+  }
+
+  if (data?.data) {
+    state = { ...structuredClone(defaultData), ...data.data };
+    selectedFront = new Set(state.activeFront || []);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } else {
+    await saveCloudState();
+  }
+
+  isLoadingRemote = false;
+  renderAll();
+}
+
+function updateAuthUi() {
+  const isConfigured = Boolean(supabaseClient);
+  $("#login-google").hidden = Boolean(currentUser) || !isConfigured;
+  $("#logout").hidden = !currentUser;
+  $("#auth-status").textContent = currentUser ? "Connecte" : (isConfigured ? "Non connecte" : "Supabase a configurer");
+  $("#auth-email").textContent = currentUser?.email || (isConfigured ? "Synchronisation locale" : "Cle publique manquante");
+  $("#sync-label").textContent = currentUser ? "Synchronise" : "Mode local";
+  updateSyncHelp(
+    currentUser
+      ? "Connecte a Supabase. Les changements sont sauvegardes en ligne."
+      : isConfigured
+        ? "Connecte-toi avec Google pour synchroniser les donnees."
+        : "Ajoute la cle publique dans supabase-config.js pour activer Supabase."
+  );
+}
+
+function updateSyncHelp(message) {
+  const node = $("#sync-help");
+  if (node) node.textContent = message;
+}
+
+async function initAuth() {
+  if (!supabaseClient) {
+    updateAuthUi();
+    return;
+  }
+
+  const { data } = await supabaseClient.auth.getSession();
+  currentUser = data.session?.user || null;
+  updateAuthUi();
+
+  if (currentUser) {
+    await loadCloudState().catch((error) => {
+      updateSyncHelp(`Chargement Supabase impossible : ${error.message}`);
+    });
+  }
+
+  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    currentUser = session?.user || null;
+    updateAuthUi();
+    if (currentUser) {
+      await loadCloudState().catch((error) => {
+        updateSyncHelp(`Chargement Supabase impossible : ${error.message}`);
+      });
+    }
+  });
 }
 
 function formatDate(value) {
@@ -480,4 +594,38 @@ $("#reset-data").addEventListener("click", () => {
   renderAll();
 });
 
+$("#login-google").addEventListener("click", async () => {
+  if (!supabaseClient) {
+    updateSyncHelp("Supabase n'est pas encore configure.");
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin + window.location.pathname
+    }
+  });
+
+  if (error) updateSyncHelp(`Connexion Google impossible : ${error.message}`);
+});
+
+$("#logout").addEventListener("click", async () => {
+  if (!supabaseClient) return;
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) updateSyncHelp(`Deconnexion impossible : ${error.message}`);
+});
+
+$("#sync-now").addEventListener("click", async () => {
+  if (!supabaseClient || !currentUser) {
+    updateAuthUi();
+    return;
+  }
+
+  await saveCloudState().catch((error) => {
+    updateSyncHelp(`Synchro impossible : ${error.message}`);
+  });
+});
+
 renderAll();
+initAuth();

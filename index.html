@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Plural Home</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    <script src="supabase-config.js"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -13,9 +15,21 @@
           <div class="brand-mark" aria-hidden="true">P</div>
           <div>
             <h1>Plural Home</h1>
-            <p>Tableau local</p>
+            <p id="sync-label">Mode local</p>
           </div>
         </div>
+
+        <section class="auth-panel" aria-label="Compte">
+          <div>
+            <p class="eyebrow">Compte</p>
+            <strong id="auth-status">Non connecte</strong>
+            <span id="auth-email">Synchronisation locale</span>
+          </div>
+          <div class="auth-actions">
+            <button class="primary-button" id="login-google" type="button">Connexion Google</button>
+            <button class="ghost-button" id="logout" type="button" hidden>Deconnexion</button>
+          </div>
+        </section>
 
         <nav class="nav" aria-label="Navigation principale">
           <button class="nav-item is-active" data-view="dashboard" type="button">⌂ <span>Accueil</span></button>
@@ -155,6 +169,13 @@
                 <button class="primary-button" id="export-data" type="button">⇩ Export JSON</button>
                 <label class="file-button" for="import-data">⇧ Import JSON</label>
                 <input id="import-data" type="file" accept="application/json">
+              </div>
+            </section>
+            <section class="panel">
+              <h3>Synchronisation</h3>
+              <p class="settings-copy" id="sync-help">Configure Supabase pour activer la connexion Google et la sauvegarde en ligne.</p>
+              <div class="button-row">
+                <button class="primary-button" id="sync-now" type="button">Synchroniser</button>
               </div>
             </section>
             <section class="panel danger-panel">
