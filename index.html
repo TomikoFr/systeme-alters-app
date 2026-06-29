@@ -9,7 +9,31 @@
     <script src="supabase-config.js"></script>
   </head>
   <body>
-    <div class="app-shell">
+    <section class="login-screen" id="login-screen" aria-labelledby="login-title">
+      <div class="login-hero">
+        <div class="brand login-brand">
+          <div class="brand-mark" aria-hidden="true">P</div>
+          <div>
+            <p class="eyebrow">Panda Plural</p>
+            <h1 id="login-title">Plural Home</h1>
+          </div>
+        </div>
+        <div class="login-copy">
+          <h2>Connecte ton espace plural</h2>
+          <p>Retrouve tes membres, le front, l'historique et le journal depuis ton compte Google.</p>
+        </div>
+        <div class="login-card">
+          <p class="eyebrow">Connexion</p>
+          <button class="google-button" id="login-google-main" type="button">
+            <span aria-hidden="true">G</span>
+            Continuer avec Google
+          </button>
+          <p id="login-message">Les donnees sont synchronisees avec Supabase apres connexion.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="app-shell" id="app-shell" hidden>
       <aside class="sidebar">
         <div class="brand">
           <div class="brand-mark" aria-hidden="true">P</div>
@@ -26,7 +50,6 @@
             <span id="auth-email">Synchronisation locale</span>
           </div>
           <div class="auth-actions">
-            <button class="primary-button" id="login-google" type="button">Connexion Google</button>
             <button class="ghost-button" id="logout" type="button" hidden>Deconnexion</button>
           </div>
         </section>

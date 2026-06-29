@@ -127,11 +127,18 @@ async function loadCloudState() {
 
 function updateAuthUi() {
   const isConfigured = Boolean(supabaseClient);
-  $("#login-google").hidden = Boolean(currentUser) || !isConfigured;
+  $("#app-shell").hidden = !currentUser;
+  $("#login-screen").hidden = Boolean(currentUser);
   $("#logout").hidden = !currentUser;
   $("#auth-status").textContent = currentUser ? "Connecte" : (isConfigured ? "Non connecte" : "Supabase a configurer");
   $("#auth-email").textContent = currentUser?.email || (isConfigured ? "Synchronisation locale" : "Cle publique manquante");
   $("#sync-label").textContent = currentUser ? "Synchronise" : "Mode local";
+  $("#login-google-main").disabled = !isConfigured;
+  $("#login-message").textContent = currentUser
+    ? "Connexion active."
+    : isConfigured
+      ? "Les donnees sont synchronisees avec Supabase apres connexion."
+      : "Supabase n'est pas encore configure.";
   updateSyncHelp(
     currentUser
       ? "Connecte a Supabase. Les changements sont sauvegardes en ligne."
@@ -139,6 +146,13 @@ function updateAuthUi() {
         ? "Connecte-toi avec Google pour synchroniser les donnees."
         : "Ajoute la cle publique dans supabase-config.js pour activer Supabase."
   );
+}
+
+function authRedirectUrl() {
+  const url = new URL(window.location.href);
+  url.hash = "";
+  url.search = "";
+  return url.toString();
 }
 
 function updateSyncHelp(message) {
@@ -594,20 +608,20 @@ $("#reset-data").addEventListener("click", () => {
   renderAll();
 });
 
-$("#login-google").addEventListener("click", async () => {
+$("#login-google-main").addEventListener("click", async () => {
   if (!supabaseClient) {
-    updateSyncHelp("Supabase n'est pas encore configure.");
+    $("#login-message").textContent = "Supabase n'est pas encore configure.";
     return;
   }
 
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin + window.location.pathname
+      redirectTo: authRedirectUrl()
     }
   });
 
-  if (error) updateSyncHelp(`Connexion Google impossible : ${error.message}`);
+  if (error) $("#login-message").textContent = `Connexion Google impossible : ${error.message}`;
 });
 
 $("#logout").addEventListener("click", async () => {
