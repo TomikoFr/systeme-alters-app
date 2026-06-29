@@ -45,6 +45,7 @@ let selectedFront = new Set(state.activeFront);
 let currentUser = null;
 let syncTimer = null;
 let isLoadingRemote = false;
+let linkedProviders = new Set();
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -147,6 +148,7 @@ function updateAuthUi() {
         ? "Connecte-toi avec Google pour synchroniser les donnees."
         : "Ajoute la cle publique dans supabase-config.js pour activer Supabase."
   );
+  renderLinkedIdentities();
 }
 
 function authRedirectUrl() {
@@ -172,6 +174,77 @@ async function signInWithProvider(provider) {
   if (error) $("#login-message").textContent = `Connexion impossible : ${error.message}`;
 }
 
+function providerLabel(provider) {
+  return {
+    discord: "Discord",
+    google: "Google"
+  }[provider] || provider;
+}
+
+function renderLinkedIdentities() {
+  const list = $("#identity-list");
+  if (!list) return;
+
+  list.replaceChildren();
+  $("#link-google").disabled = !currentUser || linkedProviders.has("google");
+  $("#link-discord").disabled = !currentUser || linkedProviders.has("discord");
+
+  if (!currentUser) {
+    $("#identity-help").textContent = "Connecte-toi pour voir les moyens lies a ton compte.";
+    return;
+  }
+
+  if (!linkedProviders.size) {
+    $("#identity-help").textContent = "Aucun moyen detecte pour l'instant.";
+    return;
+  }
+
+  $("#identity-help").textContent = "Moyens deja lies a ce compte.";
+  [...linkedProviders].sort().forEach((provider) => {
+    const item = document.createElement("span");
+    item.className = "identity-chip";
+    item.textContent = providerLabel(provider);
+    list.append(item);
+  });
+}
+
+async function refreshLinkedIdentities() {
+  linkedProviders = new Set();
+
+  if (!supabaseClient || !currentUser) {
+    renderLinkedIdentities();
+    return;
+  }
+
+  const { data, error } = await supabaseClient.auth.getUserIdentities();
+  if (error) {
+    $("#identity-help").textContent = `Identites impossibles a charger : ${error.message}`;
+    renderLinkedIdentities();
+    return;
+  }
+
+  linkedProviders = new Set((data?.identities || []).map((identity) => identity.provider));
+  renderLinkedIdentities();
+}
+
+async function linkProvider(provider) {
+  if (!supabaseClient || !currentUser) {
+    $("#identity-help").textContent = "Connecte-toi avant de lier un autre moyen.";
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.linkIdentity({
+    provider,
+    options: {
+      redirectTo: authRedirectUrl()
+    }
+  });
+
+  if (error) {
+    $("#identity-help").textContent = `Liaison ${providerLabel(provider)} impossible : ${error.message}`;
+  }
+}
+
 function updateSyncHelp(message) {
   const node = $("#sync-help");
   if (node) node.textContent = message;
@@ -191,6 +264,7 @@ async function initAuth() {
     await loadCloudState().catch((error) => {
       updateSyncHelp(`Chargement Supabase impossible : ${error.message}`);
     });
+    await refreshLinkedIdentities();
   }
 
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
@@ -200,6 +274,10 @@ async function initAuth() {
       await loadCloudState().catch((error) => {
         updateSyncHelp(`Chargement Supabase impossible : ${error.message}`);
       });
+      await refreshLinkedIdentities();
+    } else {
+      linkedProviders = new Set();
+      renderLinkedIdentities();
     }
   });
 }
@@ -648,6 +726,14 @@ $("#sync-now").addEventListener("click", async () => {
   await saveCloudState().catch((error) => {
     updateSyncHelp(`Synchro impossible : ${error.message}`);
   });
+});
+
+$("#link-google").addEventListener("click", async () => {
+  await linkProvider("google");
+});
+
+$("#link-discord").addEventListener("click", async () => {
+  await linkProvider("discord");
 });
 
 renderAll();
