@@ -304,6 +304,18 @@ p {
   overflow-wrap: anywhere;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .auth-actions {
   display: grid;
   gap: 8px;
@@ -642,6 +654,76 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.chat-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 30px rgba(28, 35, 38, 0.06);
+}
+
+.chat-messages {
+  height: min(56vh, 620px);
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.chat-message {
+  width: min(760px, 92%);
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.chat-message.mine {
+  align-self: flex-end;
+  border-color: rgba(39, 108, 114, 0.35);
+  background: var(--accent-soft);
+}
+
+.chat-message-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.chat-message-head strong {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.chat-message p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.chat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.chat-form textarea {
+  min-height: 72px;
+}
+
 .empty-state {
   min-height: 140px;
   display: grid;
@@ -725,7 +807,7 @@ menu {
   }
 
   .nav {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .nav-item {
@@ -774,9 +856,20 @@ menu {
 
   .toolbar,
   .form-row,
+  .chat-form,
   .email-actions {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .chat-messages {
+    height: 52vh;
+    min-height: 300px;
+    padding: 10px;
+  }
+
+  .chat-message {
+    width: 100%;
   }
 
   .brand-mark {

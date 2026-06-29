@@ -46,6 +46,8 @@ let currentUser = null;
 let syncTimer = null;
 let isLoadingRemote = false;
 let linkedProviders = new Set();
+let chatMessages = [];
+let chatChannel = null;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -55,6 +57,7 @@ const views = {
   members: $("#view-members"),
   front: $("#view-front"),
   journal: $("#view-journal"),
+  chat: $("#view-chat"),
   settings: $("#view-settings")
 };
 
@@ -124,6 +127,144 @@ async function loadCloudState() {
 
   isLoadingRemote = false;
   renderAll();
+}
+
+function currentDisplayName() {
+  return currentUser?.user_metadata?.full_name ||
+    currentUser?.user_metadata?.name ||
+    currentUser?.user_metadata?.preferred_username ||
+    currentUser?.email?.split("@")[0] ||
+    "Membre";
+}
+
+function updateChatStatus(message) {
+  const node = $("#chat-status");
+  if (node) node.textContent = message;
+}
+
+function renderChatMessages() {
+  const container = $("#chat-messages");
+  if (!container) return;
+
+  container.replaceChildren();
+
+  if (!currentUser) {
+    container.append(empty("Connecte-toi pour voir la discussion."));
+    updateChatStatus("La discussion est disponible apres connexion.");
+    return;
+  }
+
+  if (!chatMessages.length) {
+    container.append(empty("Aucun message pour l'instant."));
+    updateChatStatus("Tu peux lancer la discussion.");
+    return;
+  }
+
+  chatMessages.forEach((message) => {
+    const item = document.createElement("article");
+    item.className = `chat-message${message.user_id === currentUser.id ? " mine" : ""}`;
+
+    const head = document.createElement("div");
+    head.className = "chat-message-head";
+
+    const author = document.createElement("strong");
+    author.textContent = message.display_name || "Membre";
+
+    const date = document.createElement("span");
+    date.textContent = formatDate(message.created_at);
+
+    const body = document.createElement("p");
+    body.textContent = message.body || "";
+
+    head.append(author, date);
+    item.append(head, body);
+    container.append(item);
+  });
+
+  container.scrollTop = container.scrollHeight;
+  updateChatStatus(`${chatMessages.length} message${chatMessages.length > 1 ? "s" : ""} charge${chatMessages.length > 1 ? "s" : ""}.`);
+}
+
+async function loadChatMessages() {
+  if (!supabaseClient || !currentUser) {
+    chatMessages = [];
+    renderChatMessages();
+    return;
+  }
+
+  updateChatStatus("Chargement de la discussion...");
+
+  const { data, error } = await supabaseClient
+    .from("global_chat_messages")
+    .select("id,user_id,display_name,body,created_at")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    updateChatStatus(`Discussion impossible a charger : ${error.message}`);
+    return;
+  }
+
+  chatMessages = (data || []).reverse();
+  renderChatMessages();
+}
+
+async function sendChatMessage() {
+  if (!supabaseClient || !currentUser) {
+    updateChatStatus("Connecte-toi avant d'envoyer un message.");
+    return;
+  }
+
+  const input = $("#chat-input");
+  const button = $("#send-chat");
+  const body = input.value.trim();
+  if (!body) return;
+
+  button.disabled = true;
+  updateChatStatus("Envoi du message...");
+
+  const { error } = await supabaseClient
+    .from("global_chat_messages")
+    .insert({
+      user_id: currentUser.id,
+      display_name: currentDisplayName(),
+      body
+    });
+
+  button.disabled = false;
+
+  if (error) {
+    updateChatStatus(`Message impossible a envoyer : ${error.message}`);
+    return;
+  }
+
+  input.value = "";
+  updateChatStatus("Message envoye.");
+  await loadChatMessages();
+}
+
+function stopChatSubscription() {
+  if (!supabaseClient || !chatChannel) return;
+  supabaseClient.removeChannel(chatChannel);
+  chatChannel = null;
+}
+
+function subscribeChat() {
+  if (!supabaseClient || !currentUser) return;
+
+  stopChatSubscription();
+  chatChannel = supabaseClient
+    .channel("global-chat")
+    .on("postgres_changes", {
+      event: "INSERT",
+      schema: "public",
+      table: "global_chat_messages"
+    }, (payload) => {
+      if (!payload.new?.id || chatMessages.some((message) => message.id === payload.new.id)) return;
+      chatMessages = [...chatMessages, payload.new].slice(-100);
+      renderChatMessages();
+    })
+    .subscribe();
 }
 
 function updateAuthUi() {
@@ -329,6 +470,8 @@ async function initAuth() {
       updateSyncHelp(`Chargement Supabase impossible : ${error.message}`);
     });
     await refreshLinkedIdentities();
+    await loadChatMessages();
+    subscribeChat();
   }
 
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
@@ -339,9 +482,14 @@ async function initAuth() {
         updateSyncHelp(`Chargement Supabase impossible : ${error.message}`);
       });
       await refreshLinkedIdentities();
+      await loadChatMessages();
+      subscribeChat();
     } else {
       linkedProviders = new Set();
+      chatMessages = [];
+      stopChatSubscription();
       renderLinkedIdentities();
+      renderChatMessages();
     }
   });
 }
@@ -387,6 +535,7 @@ function renderAll() {
   renderMembers();
   renderFrontPicker();
   renderJournal();
+  renderChatMessages();
   saveState();
 }
 
@@ -680,6 +829,12 @@ $("#member-search").addEventListener("input", renderMembers);
 $("#group-filter").addEventListener("change", renderMembers);
 $("#note-search").addEventListener("input", renderJournal);
 $("#note-author-filter").addEventListener("change", renderJournal);
+$("#refresh-chat").addEventListener("click", loadChatMessages);
+
+$("#chat-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await sendChatMessage();
+});
 
 $("#system-name").addEventListener("input", (event) => {
   state.system.name = event.target.value;
