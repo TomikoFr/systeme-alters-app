@@ -1,0 +1,11 @@
+.git
+.github
+.env
+.env.*
+node_modules
+discord-presence/node_modules
+dist
+build
+*.log
+*.tmp
+*.temp

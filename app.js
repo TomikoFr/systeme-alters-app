@@ -9,6 +9,7 @@ const SUPABASE_READY = Boolean(
 const supabaseClient = SUPABASE_READY
   ? window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey)
   : null;
+const DISCORD_PRESENCE_URL = "http://127.0.0.1:3020/presence";
 
 const defaultData = {
   system: {
@@ -130,11 +131,54 @@ async function loadCloudState() {
 }
 
 function currentDisplayName() {
+  const frontName = currentFrontDisplayName();
+  if (frontName) return frontName;
+
   return currentUser?.user_metadata?.full_name ||
     currentUser?.user_metadata?.name ||
     currentUser?.user_metadata?.preferred_username ||
     currentUser?.email?.split("@")[0] ||
     "Membre";
+}
+
+function currentFrontDisplayName() {
+  const names = (state.activeFront || [])
+    .map(memberById)
+    .filter(Boolean)
+    .map((member) => member.name)
+    .filter(Boolean);
+
+  if (!names.length) return "";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} et ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} et ${names.at(-1)}`;
+}
+
+function currentFrontPresence() {
+  const members = (state.activeFront || []).map(memberById).filter(Boolean);
+  return {
+    systemName: state.system.name || "Plural Home",
+    frontName: currentFrontDisplayName() || "Aucun front",
+    frontCount: members.length,
+    note: state.system.note || ""
+  };
+}
+
+function syncDiscordPresence() {
+  fetch(DISCORD_PRESENCE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(currentFrontPresence()),
+    keepalive: true
+  }).catch(() => {
+    // Discord Presence companion is optional and may be closed.
+  });
+}
+
+function updateChatIdentity() {
+  const node = $("#chat-identity");
+  if (!node) return;
+  node.textContent = `Envoi en tant que ${currentDisplayName()}`;
 }
 
 function updateChatStatus(message) {
@@ -146,6 +190,7 @@ function renderChatMessages() {
   const container = $("#chat-messages");
   if (!container) return;
 
+  updateChatIdentity();
   container.replaceChildren();
 
   if (!currentUser) {
@@ -704,6 +749,7 @@ function commitFront(defaultComment = "") {
 
   $("#front-comment").value = "";
   renderAll();
+  syncDiscordPresence();
 }
 
 function renderHistoryInto(container, items) {
@@ -970,3 +1016,4 @@ $("#link-discord").addEventListener("click", async () => {
 
 renderAll();
 initAuth();
+syncDiscordPresence();

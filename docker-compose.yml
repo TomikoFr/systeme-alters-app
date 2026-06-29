@@ -1,0 +1,7 @@
+services:
+  plural-home:
+    build: .
+    container_name: plural-home
+    ports:
+      - "5177:80"
+    restart: unless-stopped
