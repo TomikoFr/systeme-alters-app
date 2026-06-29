@@ -96,7 +96,8 @@ body {
   line-height: 1.5;
 }
 
-.google-button {
+.google-button,
+.discord-button {
   min-height: 52px;
   display: inline-flex;
   align-items: center;
@@ -109,7 +110,13 @@ body {
   font-weight: 800;
 }
 
-.google-button span {
+.discord-button {
+  background: #5865f2;
+  border-color: #5865f2;
+}
+
+.google-button span,
+.discord-button span {
   width: 26px;
   aspect-ratio: 1;
   display: grid;
@@ -120,7 +127,12 @@ body {
   font-weight: 900;
 }
 
-.google-button:disabled {
+.discord-button span {
+  color: #5865f2;
+}
+
+.google-button:disabled,
+.discord-button:disabled {
   cursor: not-allowed;
   opacity: 0.62;
 }

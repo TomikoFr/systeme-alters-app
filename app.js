@@ -134,6 +134,7 @@ function updateAuthUi() {
   $("#auth-email").textContent = currentUser?.email || (isConfigured ? "Synchronisation locale" : "Cle publique manquante");
   $("#sync-label").textContent = currentUser ? "Synchronise" : "Mode local";
   $("#login-google-main").disabled = !isConfigured;
+  $("#login-discord-main").disabled = !isConfigured;
   $("#login-message").textContent = currentUser
     ? "Connexion active."
     : isConfigured
@@ -153,6 +154,22 @@ function authRedirectUrl() {
   url.hash = "";
   url.search = "";
   return url.toString();
+}
+
+async function signInWithProvider(provider) {
+  if (!supabaseClient) {
+    $("#login-message").textContent = "Supabase n'est pas encore configure.";
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: authRedirectUrl()
+    }
+  });
+
+  if (error) $("#login-message").textContent = `Connexion impossible : ${error.message}`;
 }
 
 function updateSyncHelp(message) {
@@ -609,19 +626,11 @@ $("#reset-data").addEventListener("click", () => {
 });
 
 $("#login-google-main").addEventListener("click", async () => {
-  if (!supabaseClient) {
-    $("#login-message").textContent = "Supabase n'est pas encore configure.";
-    return;
-  }
+  await signInWithProvider("google");
+});
 
-  const { error } = await supabaseClient.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: authRedirectUrl()
-    }
-  });
-
-  if (error) $("#login-message").textContent = `Connexion Google impossible : ${error.message}`;
+$("#login-discord-main").addEventListener("click", async () => {
+  await signInWithProvider("discord");
 });
 
 $("#logout").addEventListener("click", async () => {
