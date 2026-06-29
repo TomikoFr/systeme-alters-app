@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Plural Home</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">P</div>
+          <div>
+            <h1>Plural Home</h1>
+            <p>Tableau local</p>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Navigation principale">
+          <button class="nav-item is-active" data-view="dashboard" type="button">⌂ <span>Accueil</span></button>
+          <button class="nav-item" data-view="members" type="button">◎ <span>Membres</span></button>
+          <button class="nav-item" data-view="front" type="button">◴ <span>Front</span></button>
+          <button class="nav-item" data-view="journal" type="button">✎ <span>Journal</span></button>
+          <button class="nav-item" data-view="settings" type="button">⚙ <span>Données</span></button>
+        </nav>
+
+        <div class="system-panel">
+          <label for="system-name">Nom du système</label>
+          <input id="system-name" type="text" autocomplete="off" placeholder="Mon système">
+          <label for="system-note">Mémo</label>
+          <textarea id="system-note" rows="4" placeholder="État général, consignes, contexte..."></textarea>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section class="topbar" aria-label="Résumé">
+          <div>
+            <p class="eyebrow">Aujourd'hui</p>
+            <h2 id="today-title">Vue d'ensemble</h2>
+          </div>
+          <div class="front-now" id="front-now"></div>
+        </section>
+
+        <section class="view is-visible" id="view-dashboard">
+          <div class="dashboard-grid">
+            <section class="panel current-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Front actuel</p>
+                  <h3>Présence</h3>
+                </div>
+                <button class="icon-button" id="quick-front" type="button" title="Changer le front">◴</button>
+              </div>
+              <div class="current-front" id="current-front"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Membres</p>
+                  <h3>Accès rapide</h3>
+                </div>
+                <button class="icon-button" data-open-member-form type="button" title="Ajouter un membre">＋</button>
+              </div>
+              <div class="member-strip" id="member-strip"></div>
+            </section>
+
+            <section class="panel wide">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Dernières entrées</p>
+                  <h3>Journal</h3>
+                </div>
+                <button class="icon-button" data-open-note-form type="button" title="Ajouter une note">✎</button>
+              </div>
+              <div class="note-list compact" id="dashboard-notes"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Historique</p>
+                  <h3>Switchs récents</h3>
+                </div>
+              </div>
+              <div class="history-list" id="recent-history"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-members">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Répertoire</p>
+              <h2>Membres</h2>
+            </div>
+            <button class="primary-button" data-open-member-form type="button">＋ Ajouter</button>
+          </div>
+          <div class="toolbar">
+            <input id="member-search" type="search" placeholder="Rechercher">
+            <select id="group-filter" aria-label="Filtrer par groupe"></select>
+          </div>
+          <div class="members-grid" id="members-grid"></div>
+        </section>
+
+        <section class="view" id="view-front">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Suivi</p>
+              <h2>Front</h2>
+            </div>
+            <button class="primary-button" id="save-front" type="button">✓ Enregistrer</button>
+          </div>
+          <div class="front-layout">
+            <section class="panel">
+              <h3>Sélection</h3>
+              <div class="front-picker" id="front-picker"></div>
+              <label for="front-comment">Commentaire</label>
+              <textarea id="front-comment" rows="4" placeholder="Contexte du switch..."></textarea>
+            </section>
+            <section class="panel">
+              <h3>Historique</h3>
+              <div class="history-list full" id="front-history"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-journal">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Notes</p>
+              <h2>Journal</h2>
+            </div>
+            <button class="primary-button" data-open-note-form type="button">✎ Nouvelle note</button>
+          </div>
+          <div class="toolbar">
+            <input id="note-search" type="search" placeholder="Rechercher">
+            <select id="note-author-filter" aria-label="Filtrer par auteur"></select>
+          </div>
+          <div class="note-list" id="journal-list"></div>
+        </section>
+
+        <section class="view" id="view-settings">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Local</p>
+              <h2>Données</h2>
+            </div>
+          </div>
+          <div class="settings-grid">
+            <section class="panel">
+              <h3>Import / export</h3>
+              <div class="button-row">
+                <button class="primary-button" id="export-data" type="button">⇩ Export JSON</button>
+                <label class="file-button" for="import-data">⇧ Import JSON</label>
+                <input id="import-data" type="file" accept="application/json">
+              </div>
+            </section>
+            <section class="panel danger-panel">
+              <h3>Réinitialisation</h3>
+              <button class="danger-button" id="reset-data" type="button">Effacer les données locales</button>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="member-dialog">
+      <form method="dialog" class="dialog-form" id="member-form">
+        <div class="dialog-head">
+          <h2 id="member-dialog-title">Membre</h2>
+          <button class="icon-button" value="cancel" type="submit" title="Fermer">×</button>
+        </div>
+        <input type="hidden" id="member-id">
+        <label for="member-name">Nom</label>
+        <input id="member-name" required autocomplete="off">
+        <div class="form-row">
+          <label>Pronoms
+            <input id="member-pronouns" autocomplete="off" placeholder="elle/iel, il/lui...">
+          </label>
+          <label>Couleur
+            <input id="member-color" type="color" value="#4f8cff">
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Groupe
+            <input id="member-group" autocomplete="off" placeholder="Protecteurs, Littles...">
+          </label>
+          <label>Confidentialité
+            <select id="member-privacy">
+              <option value="privé">privé</option>
+              <option value="proches">proches</option>
+              <option value="public">public</option>
+            </select>
+          </label>
+        </div>
+        <label for="member-description">Description</label>
+        <textarea id="member-description" rows="4"></textarea>
+        <menu>
+          <button class="ghost-button" value="cancel" type="submit">Annuler</button>
+          <button class="primary-button" id="save-member" value="default" type="submit">Enregistrer</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="note-dialog">
+      <form method="dialog" class="dialog-form" id="note-form">
+        <div class="dialog-head">
+          <h2>Note</h2>
+          <button class="icon-button" value="cancel" type="submit" title="Fermer">×</button>
+        </div>
+        <label for="note-title">Titre</label>
+        <input id="note-title" required autocomplete="off">
+        <label for="note-author">Auteur</label>
+        <select id="note-author"></select>
+        <label for="note-body">Contenu</label>
+        <textarea id="note-body" rows="7" required></textarea>
+        <menu>
+          <button class="ghost-button" value="cancel" type="submit">Annuler</button>
+          <button class="primary-button" value="default" type="submit">Enregistrer</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <template id="empty-template">
+      <div class="empty-state">
+        <div aria-hidden="true">◇</div>
+        <p></p>
+      </div>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+# Local editor and OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Dependencies and build outputs, for future app versions
+node_modules/
+dist/
+build/
+.env
+.env.*
+
+# Keep example env files trackable
+!.env.example
